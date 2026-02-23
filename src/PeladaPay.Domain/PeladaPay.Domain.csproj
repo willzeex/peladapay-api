@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>PeladaPay.Domain</AssemblyName>
+    <RootNamespace>PeladaPay.Domain</RootNamespace>
+  </PropertyGroup>
+</Project>
