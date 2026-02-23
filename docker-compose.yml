@@ -1,0 +1,30 @@
+version: '3.9'
+services:
+  api:
+    build: .
+    container_name: peladapay-api
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=peladapaydb;Username=postgres;Password=postgres
+      Jwt__Issuer: PeladaPay
+      Jwt__Audience: PeladaPayClients
+      Jwt__Key: peladapay-super-secret-key-123456
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: peladapay-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: peladapaydb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

@@ -1,0 +1,10 @@
+@host=http://localhost:8080
+
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Novo Gestor",
+  "email": "novo@peladapay.com",
+  "password": "Pelada123!"
+}
