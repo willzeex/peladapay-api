@@ -1,6 +1,6 @@
 # PeladaPay API
 
-API .NET 8 com Clean Architecture, CQRS (MediatR), EF Core/PostgreSQL, Identity + JWT, FluentValidation e Swagger.
+API .NET 9 com Clean Architecture, CQRS (MediatR), EF Core/PostgreSQL, Identity + JWT, FluentValidation e Swagger.
 
 ## Subir com Docker
 
