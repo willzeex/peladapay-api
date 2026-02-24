@@ -12,6 +12,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<Group> Groups => Set<Group>();
     public DbSet<Player> Players => Set<Player>();
+    public DbSet<GroupPlayer> GroupPlayers => Set<GroupPlayer>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<FinancialAccount> FinancialAccounts => Set<FinancialAccount>();
 
@@ -22,14 +23,48 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<Group>(entity =>
         {
             entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
-            entity.HasOne(x => x.FinancialAccount).WithMany().HasForeignKey(x => x.FinancialAccountId);
-            entity.HasOne(x => x.Manager).WithMany().HasForeignKey(x => x.ManagerId);
+            entity.HasOne(x => x.FinancialAccount)
+                .WithMany()
+                .HasForeignKey(x => x.FinancialAccountId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.Organizer)
+                .WithMany(x => x.OrganizedGroups)
+                .HasForeignKey(x => x.OrganizerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasMany(x => x.Players)
+                .WithMany(x => x.Groups)
+                .UsingEntity<GroupPlayer>(
+                    right => right
+                        .HasOne(x => x.Player)
+                        .WithMany(x => x.GroupPlayers)
+                        .HasForeignKey(x => x.PlayerId)
+                        .OnDelete(DeleteBehavior.Restrict),
+                    left => left
+                        .HasOne(x => x.Group)
+                        .WithMany(x => x.GroupPlayers)
+                        .HasForeignKey(x => x.GroupId)
+                        .OnDelete(DeleteBehavior.Cascade),
+                    join =>
+                    {
+                        join.HasKey(x => x.Id);
+                        join.HasIndex(x => new { x.GroupId, x.PlayerId }).IsUnique();
+                    });
         });
 
         builder.Entity<Player>(entity =>
         {
             entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Email).HasMaxLength(120).IsRequired();
             entity.Property(x => x.Phone).HasMaxLength(20).IsRequired();
+            entity.HasIndex(x => x.Email).IsUnique();
+            entity.HasIndex(x => x.Phone).IsUnique();
+        });
+
+        builder.Entity<GroupPlayer>(entity =>
+        {
+            entity.ToTable("GroupPlayers");
         });
 
         builder.Entity<Transaction>(entity =>

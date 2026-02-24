@@ -26,6 +26,17 @@ public class GeneratePixChargeCommandValidator : AbstractValidator<GeneratePixCh
     }
 }
 
+public class AddPlayerToGroupCommandValidator : AbstractValidator<AddPlayerToGroupCommand>
+{
+    public AddPlayerToGroupCommandValidator()
+    {
+        RuleFor(x => x.GroupId).NotEqual(Guid.Empty);
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(120);
+        RuleFor(x => x.Phone).NotEmpty().MaximumLength(20);
+    }
+}
+
 public class ConfirmPaymentWebhookCommandValidator : AbstractValidator<ConfirmPaymentWebhookCommand>
 {
     public ConfirmPaymentWebhookCommandValidator()

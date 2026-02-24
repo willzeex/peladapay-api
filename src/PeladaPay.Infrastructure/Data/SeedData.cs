@@ -42,7 +42,7 @@ public static class SeedData
         {
             Name = "Pelada de Quinta",
             MatchDate = DateTime.UtcNow.AddDays(2),
-            ManagerId = manager.Id,
+            OrganizerId = manager.Id,
             FinancialAccount = account
         };
 

@@ -8,8 +8,9 @@ public class Group : BaseEntity
     public DateTime MatchDate { get; set; }
     public Guid FinancialAccountId { get; set; }
     public FinancialAccount? FinancialAccount { get; set; }
-    public string ManagerId { get; set; } = string.Empty;
-    public ApplicationUser? Manager { get; set; }
+    public string OrganizerId { get; set; } = string.Empty;
+    public ApplicationUser? Organizer { get; set; }
     public ICollection<Player> Players { get; set; } = new List<Player>();
+    public ICollection<GroupPlayer> GroupPlayers { get; set; } = new List<GroupPlayer>();
     public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
 }

@@ -16,7 +16,7 @@ public sealed class CreateGroupCommandHandler(
 {
     public async Task<GroupDto> Handle(CreateGroupCommand request, CancellationToken cancellationToken)
     {
-        var managerId = currentUserService.UserId ?? throw new UnauthorizedAccessException();
+        var organizerId = currentUserService.UserId ?? throw new UnauthorizedAccessException();
 
         var account = new FinancialAccount
         {
@@ -32,7 +32,7 @@ public sealed class CreateGroupCommandHandler(
             Name = request.Name,
             MatchDate = request.MatchDate,
             FinancialAccountId = account.Id,
-            ManagerId = managerId
+            OrganizerId = organizerId
         };
 
         await groupRepository.AddAsync(group, cancellationToken);

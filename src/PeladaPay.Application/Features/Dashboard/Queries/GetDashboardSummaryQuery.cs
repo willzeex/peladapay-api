@@ -21,7 +21,7 @@ public sealed class GetDashboardSummaryQueryHandler(
         var group = await groupRepository.GetByIdAsync(request.GroupId, cancellationToken)
             ?? throw new InvalidOperationException("Grupo não encontrado.");
 
-        if (group.ManagerId != managerId)
+        if (group.OrganizerId != managerId)
         {
             throw new UnauthorizedAccessException("Acesso negado ao grupo.");
         }
