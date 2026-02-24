@@ -1,14 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <AssemblyName>PeladaPay.Application</AssemblyName>
-    <RootNamespace>PeladaPay.Application</RootNamespace>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="MediatR" Version="12.4.1" />
-    <PackageReference Include="FluentValidation" Version="11.11.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="../PeladaPay.Domain/PeladaPay.Domain.csproj" />
-  </ItemGroup>
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<AssemblyName>PeladaPay.Application</AssemblyName>
+		<RootNamespace>PeladaPay.Application</RootNamespace>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
+		<PackageReference Include="MediatR" Version="12.4.1" />
+		<PackageReference Include="FluentValidation" Version="11.11.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="../PeladaPay.Domain/PeladaPay.Domain.csproj" />
+	</ItemGroup>
 </Project>

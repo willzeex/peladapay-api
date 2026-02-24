@@ -1,6 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <AssemblyName>PeladaPay.Domain</AssemblyName>
-    <RootNamespace>PeladaPay.Domain</RootNamespace>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<AssemblyName>PeladaPay.Domain</AssemblyName>
+		<RootNamespace>PeladaPay.Domain</RootNamespace>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="9.0.0" />
+	</ItemGroup>
 </Project>

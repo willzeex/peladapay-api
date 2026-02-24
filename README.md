@@ -27,3 +27,7 @@ docker compose -f docker-compose.db.yml down
 
 - Email: `gestor@peladapay.com`
 - Senha: `Pelada123!`
+
+
+dotnet ef database update --project src/PeladaPay.Infrastructure --startup-project src/PeladaPay.API
+dotnet ef migrations add Initial --project src/PeladaPay.Infrastructure/PeladaPay.Infrastructure.csproj --startup-project src/PeladaPay.API/PeladaPay.API.csproj
