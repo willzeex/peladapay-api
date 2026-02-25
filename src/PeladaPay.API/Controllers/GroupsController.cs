@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PeladaPay.API.Contracts;
 using PeladaPay.Application.Features.Groups.Commands;
 using PeladaPay.Application.Features.Groups.Queries;
 using PeladaPay.Application.Interfaces;
@@ -14,24 +15,52 @@ public class GroupsController(IMediator mediator, ICurrentUserService currentUse
 {
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateGroupCommand command, CancellationToken cancellationToken)
-        => Ok(await mediator.Send(command, cancellationToken));
+    {
+        var result = await mediator.Send(command, cancellationToken);
+        return StatusCode(StatusCodes.Status201Created, new ApiResponse<object>(
+            StatusCodes.Status201Created,
+            "Grupo criado com sucesso.",
+            result));
+    }
 
     [HttpPost("{groupId:guid}/players")]
     public async Task<IActionResult> AddPlayer(Guid groupId, [FromBody] AddPlayerToGroupCommand command, CancellationToken cancellationToken)
-        => Ok(await mediator.Send(command with { GroupId = groupId }, cancellationToken));
+    {
+        var result = await mediator.Send(command with { GroupId = groupId }, cancellationToken);
+        return StatusCode(StatusCodes.Status201Created, new ApiResponse<object>(
+            StatusCodes.Status201Created,
+            "Jogador adicionado ao grupo com sucesso.",
+            result));
+    }
 
     [HttpGet("my")]
     public async Task<IActionResult> GetMyGroups(CancellationToken cancellationToken)
     {
         var organizerId = currentUserService.UserId ?? throw new UnauthorizedAccessException();
-        return Ok(await mediator.Send(new GetGroupsByOrganizerQuery(organizerId), cancellationToken));
+        var result = await mediator.Send(new GetGroupsByOrganizerQuery(organizerId), cancellationToken);
+        return StatusCode(StatusCodes.Status200OK, new ApiResponse<object>(
+            StatusCodes.Status200OK,
+            "Grupos do organizador consultados com sucesso.",
+            result));
     }
 
     [HttpGet("{groupId:guid}/players")]
     public async Task<IActionResult> GetPlayersByGroup(Guid groupId, CancellationToken cancellationToken)
-        => Ok(await mediator.Send(new GetPlayersByGroupQuery(groupId), cancellationToken));
+    {
+        var result = await mediator.Send(new GetPlayersByGroupQuery(groupId), cancellationToken);
+        return StatusCode(StatusCodes.Status200OK, new ApiResponse<object>(
+            StatusCodes.Status200OK,
+            "Jogadores do grupo consultados com sucesso.",
+            result));
+    }
 
     [HttpGet("players/{playerId:guid}/activities")]
     public async Task<IActionResult> GetPlayerActivities(Guid playerId, CancellationToken cancellationToken)
-        => Ok(await mediator.Send(new GetPlayerActivitiesQuery(playerId), cancellationToken));
+    {
+        var result = await mediator.Send(new GetPlayerActivitiesQuery(playerId), cancellationToken);
+        return StatusCode(StatusCodes.Status200OK, new ApiResponse<object>(
+            StatusCodes.Status200OK,
+            "Atividades do jogador consultadas com sucesso.",
+            result));
+    }
 }
