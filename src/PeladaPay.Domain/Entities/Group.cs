@@ -6,6 +6,9 @@ public class Group : BaseEntity
 {
     public string Name { get; set; } = string.Empty;
     public DateTime MatchDate { get; set; }
+    public string? Frequency { get; set; }
+    public string? Venue { get; set; }
+    public string? CrestUrl { get; set; }
     public Guid FinancialAccountId { get; set; }
     public FinancialAccount? FinancialAccount { get; set; }
     public string OrganizerId { get; set; } = string.Empty;

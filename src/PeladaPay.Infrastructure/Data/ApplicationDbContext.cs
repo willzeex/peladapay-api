@@ -15,6 +15,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<GroupPlayer> GroupPlayers => Set<GroupPlayer>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<FinancialAccount> FinancialAccounts => Set<FinancialAccount>();
+    public DbSet<OnboardingSession> OnboardingSessions => Set<OnboardingSession>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -23,6 +24,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<Group>(entity =>
         {
             entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Frequency).HasMaxLength(30);
+            entity.Property(x => x.Venue).HasMaxLength(120);
+            entity.Property(x => x.CrestUrl).HasMaxLength(500);
             entity.HasOne(x => x.FinancialAccount)
                 .WithMany()
                 .HasForeignKey(x => x.FinancialAccountId)
@@ -78,6 +82,29 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(x => x.Balance).HasPrecision(18, 2);
             entity.Property(x => x.PixKey).HasMaxLength(120).IsRequired();
             entity.Property(x => x.ExternalSubaccountId).HasMaxLength(80).IsRequired();
+            entity.Property(x => x.MonthlyFee).HasPrecision(18, 2);
+            entity.Property(x => x.SingleMatchFee).HasPrecision(18, 2);
+        });
+
+        builder.Entity<ApplicationUser>(entity =>
+        {
+            entity.Property(x => x.Whatsapp).HasMaxLength(20);
+            entity.Property(x => x.Cpf).HasMaxLength(14);
+            entity.Property(x => x.Address).HasMaxLength(200);
+        });
+
+        builder.Entity<OnboardingSession>(entity =>
+        {
+            entity.Property(x => x.FullName).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.Email).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.Whatsapp).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.Password).HasMaxLength(256).IsRequired();
+            entity.Property(x => x.Cpf).HasMaxLength(14);
+            entity.Property(x => x.Address).HasMaxLength(200);
+            entity.Property(x => x.GroupName).HasMaxLength(100);
+            entity.Property(x => x.Frequency).HasMaxLength(30);
+            entity.Property(x => x.Venue).HasMaxLength(120);
+            entity.Property(x => x.CrestUrl).HasMaxLength(500);
         });
     }
 }
