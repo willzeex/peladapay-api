@@ -1,5 +1,6 @@
 using System.Net;
 using FluentValidation;
+using PeladaPay.API.Contracts;
 
 namespace PeladaPay.API.Middlewares;
 
@@ -14,22 +15,21 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         catch (ValidationException ex)
         {
             context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-            await context.Response.WriteAsJsonAsync(new
-            {
-                message = "Erro de validação",
-                errors = ex.Errors.Select(x => x.ErrorMessage)
-            });
+            await context.Response.WriteAsJsonAsync(new ApiValidationErrorResponse(
+                context.Response.StatusCode,
+                "Erro de validação",
+                ex.Errors.Select(x => x.ErrorMessage).ToList()));
         }
         catch (UnauthorizedAccessException ex)
         {
             context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-            await context.Response.WriteAsJsonAsync(new { message = ex.Message });
+            await context.Response.WriteAsJsonAsync(new ApiErrorResponse(context.Response.StatusCode, ex.Message));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Unhandled error");
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            await context.Response.WriteAsJsonAsync(new { message = ex.Message });
+            await context.Response.WriteAsJsonAsync(new ApiErrorResponse(context.Response.StatusCode, ex.Message));
         }
     }
 }
