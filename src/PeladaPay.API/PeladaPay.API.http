@@ -1,5 +1,7 @@
 @host=http://localhost:8080
+@sessionId=00000000-0000-0000-0000-000000000000
 
+### Cadastro simples (legado)
 POST {{host}}/api/auth/register
 Content-Type: application/json
 
@@ -7,4 +9,47 @@ Content-Type: application/json
   "fullName": "Novo Gestor",
   "email": "novo@peladapay.com",
   "password": "Pelada123!"
+}
+
+### Step 1 - Perfil
+POST {{host}}/api/auth/onboarding/profile
+Content-Type: application/json
+
+{
+  "fullName": "João da Silva",
+  "email": "joao@peladapay.com",
+  "whatsapp": "11999999999",
+  "password": "Pelada123!"
+}
+
+### Step 2 - Compliance
+PUT {{host}}/api/auth/onboarding/{{sessionId}}/compliance
+Content-Type: application/json
+
+{
+  "cpf": "123.456.789-10",
+  "birthDate": "1990-05-10",
+  "address": "Rua Exemplo, 123, Centro - SP"
+}
+
+### Step 3 - Pelada
+PUT {{host}}/api/auth/onboarding/{{sessionId}}/pelada
+Content-Type: application/json
+
+{
+  "groupName": "Pelada de Terça",
+  "frequency": "Semanal",
+  "venue": "Bairro",
+  "crestUrl": null
+}
+
+### Step 4 - Financeiro + conclusão
+POST {{host}}/api/auth/onboarding/{{sessionId}}/financial
+Content-Type: application/json
+
+{
+  "monthlyFee": 120.00,
+  "singleMatchFee": 25.00,
+  "dueDay": 10,
+  "isExpenseManagementOnly": true
 }
