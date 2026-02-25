@@ -15,7 +15,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<GroupPlayer> GroupPlayers => Set<GroupPlayer>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<FinancialAccount> FinancialAccounts => Set<FinancialAccount>();
-    public DbSet<OnboardingSession> OnboardingSessions => Set<OnboardingSession>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -91,20 +90,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(x => x.Whatsapp).HasMaxLength(20);
             entity.Property(x => x.Cpf).HasMaxLength(14);
             entity.Property(x => x.Address).HasMaxLength(200);
+            entity.Property(x => x.OnboardingGroupName).HasMaxLength(100);
+            entity.Property(x => x.OnboardingFrequency).HasMaxLength(30);
+            entity.Property(x => x.OnboardingVenue).HasMaxLength(120);
+            entity.Property(x => x.OnboardingCrestUrl).HasMaxLength(500);
         });
 
-        builder.Entity<OnboardingSession>(entity =>
-        {
-            entity.Property(x => x.FullName).HasMaxLength(120).IsRequired();
-            entity.Property(x => x.Email).HasMaxLength(120).IsRequired();
-            entity.Property(x => x.Whatsapp).HasMaxLength(20).IsRequired();
-            entity.Property(x => x.Password).HasMaxLength(256).IsRequired();
-            entity.Property(x => x.Cpf).HasMaxLength(14);
-            entity.Property(x => x.Address).HasMaxLength(200);
-            entity.Property(x => x.GroupName).HasMaxLength(100);
-            entity.Property(x => x.Frequency).HasMaxLength(30);
-            entity.Property(x => x.Venue).HasMaxLength(120);
-            entity.Property(x => x.CrestUrl).HasMaxLength(500);
-        });
     }
 }

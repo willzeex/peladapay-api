@@ -16,7 +16,6 @@ public sealed record CompleteOnboardingFinancialCommand(
 
 public sealed class CompleteOnboardingFinancialCommandHandler(
     UserManager<ApplicationUser> userManager,
-    IRepository<OnboardingSession> onboardingRepository,
     IRepository<FinancialAccount> accountRepository,
     IRepository<Group> groupRepository,
     IUnitOfWork unitOfWork,
@@ -24,44 +23,25 @@ public sealed class CompleteOnboardingFinancialCommandHandler(
 {
     public async Task<OnboardingResponseDto> Handle(CompleteOnboardingFinancialCommand request, CancellationToken cancellationToken)
     {
-        var session = await onboardingRepository.GetByIdAsync(request.SessionId, cancellationToken)
+        var user = await userManager.FindByIdAsync(request.SessionId.ToString())
             ?? throw new InvalidOperationException("Sessão de onboarding não encontrada.");
 
-        if (session.CompletedAtUtc is not null)
+        if (user.OnboardingCompletedAtUtc is not null)
         {
             throw new InvalidOperationException("Essa sessão de onboarding já foi finalizada.");
         }
 
-        if (session.CurrentStep < 3 || string.IsNullOrWhiteSpace(session.Cpf) || session.BirthDate is null
-            || string.IsNullOrWhiteSpace(session.Address) || string.IsNullOrWhiteSpace(session.GroupName)
-            || string.IsNullOrWhiteSpace(session.Frequency))
+        if (user.OnboardingCurrentStep < 3 || string.IsNullOrWhiteSpace(user.Cpf) || user.BirthDate is null
+            || string.IsNullOrWhiteSpace(user.Address) || string.IsNullOrWhiteSpace(user.OnboardingGroupName)
+            || string.IsNullOrWhiteSpace(user.OnboardingFrequency))
         {
             throw new InvalidOperationException("Complete as etapas anteriores antes de finalizar o onboarding.");
-        }
-
-        var user = new ApplicationUser
-        {
-            UserName = session.Email,
-            Email = session.Email,
-            FullName = session.FullName,
-            PhoneNumber = session.Whatsapp,
-            Whatsapp = session.Whatsapp,
-            Cpf = session.Cpf,
-            BirthDate = session.BirthDate,
-            Address = session.Address
-        };
-
-        var userCreationResult = await userManager.CreateAsync(user, session.Password);
-        if (!userCreationResult.Succeeded)
-        {
-            var errors = string.Join("; ", userCreationResult.Errors.Select(x => x.Description));
-            throw new InvalidOperationException(errors);
         }
 
         var account = new FinancialAccount
         {
             Balance = 0,
-            PixKey = session.Cpf,
+            PixKey = user.Cpf,
             ExternalSubaccountId = $"subacc_{Guid.NewGuid():N}",
             MonthlyFee = request.MonthlyFee,
             SingleMatchFee = request.SingleMatchFee,
@@ -73,20 +53,26 @@ public sealed class CompleteOnboardingFinancialCommandHandler(
 
         var group = new Group
         {
-            Name = session.GroupName,
+            Name = user.OnboardingGroupName,
             MatchDate = DateTime.UtcNow,
-            Frequency = session.Frequency,
-            Venue = session.Venue,
-            CrestUrl = session.CrestUrl,
+            Frequency = user.OnboardingFrequency,
+            Venue = user.OnboardingVenue,
+            CrestUrl = user.OnboardingCrestUrl,
             FinancialAccountId = account.Id,
             OrganizerId = user.Id
         };
 
         await groupRepository.AddAsync(group, cancellationToken);
 
-        session.CurrentStep = 4;
-        session.CompletedAtUtc = DateTime.UtcNow;
-        onboardingRepository.Update(session);
+        user.OnboardingCurrentStep = 4;
+        user.OnboardingCompletedAtUtc = DateTime.UtcNow;
+
+        var updateResult = await userManager.UpdateAsync(user);
+        if (!updateResult.Succeeded)
+        {
+            var errors = string.Join("; ", updateResult.Errors.Select(x => x.Description));
+            throw new InvalidOperationException(errors);
+        }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

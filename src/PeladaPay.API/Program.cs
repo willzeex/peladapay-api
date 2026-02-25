@@ -35,7 +35,8 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var userManager = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<PeladaPay.Domain.Entities.ApplicationUser>>();
-    await SeedData.EnsureSeedDataAsync(dbContext, userManager);
+    var roleManager = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.RoleManager<Microsoft.AspNetCore.Identity.IdentityRole>>();
+    await SeedData.EnsureSeedDataAsync(dbContext, userManager, roleManager);
 }
 
 app.Run();

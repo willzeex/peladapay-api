@@ -7,12 +7,18 @@ namespace PeladaPay.Infrastructure.Data;
 
 public static class SeedData
 {
-    public static async Task EnsureSeedDataAsync(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+    public static async Task EnsureSeedDataAsync(ApplicationDbContext context, UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
     {
         await context.Database.MigrateAsync();
 
         const string managerEmail = "gestor@peladapay.com";
+        const string organizerRole = "Organizer";
         var manager = await userManager.FindByEmailAsync(managerEmail);
+
+        if (!await roleManager.RoleExistsAsync(organizerRole))
+        {
+            await roleManager.CreateAsync(new IdentityRole(organizerRole));
+        }
 
         if (manager is null)
         {
@@ -24,6 +30,11 @@ public static class SeedData
             };
 
             await userManager.CreateAsync(manager, "Pelada123!");
+        }
+
+        if (!await userManager.IsInRoleAsync(manager, organizerRole))
+        {
+            await userManager.AddToRoleAsync(manager, organizerRole);
         }
 
         if (await context.Groups.AnyAsync())

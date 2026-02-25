@@ -1,7 +1,7 @@
 using MediatR;
+using Microsoft.AspNetCore.Identity;
 using PeladaPay.Application.DTOs;
 using PeladaPay.Domain.Entities;
-using PeladaPay.Domain.Interfaces;
 
 namespace PeladaPay.Application.Features.Auth.Commands;
 
@@ -12,27 +12,30 @@ public sealed record CompleteOnboardingComplianceCommand(
     string Address) : IRequest<OnboardingStepResponseDto>;
 
 public sealed class CompleteOnboardingComplianceCommandHandler(
-    IRepository<OnboardingSession> onboardingRepository,
-    IUnitOfWork unitOfWork) : IRequestHandler<CompleteOnboardingComplianceCommand, OnboardingStepResponseDto>
+    UserManager<ApplicationUser> userManager) : IRequestHandler<CompleteOnboardingComplianceCommand, OnboardingStepResponseDto>
 {
     public async Task<OnboardingStepResponseDto> Handle(CompleteOnboardingComplianceCommand request, CancellationToken cancellationToken)
     {
-        var session = await onboardingRepository.GetByIdAsync(request.SessionId, cancellationToken)
+        var user = await userManager.FindByIdAsync(request.SessionId.ToString())
             ?? throw new InvalidOperationException("Sessão de onboarding não encontrada.");
 
-        if (session.CompletedAtUtc is not null)
+        if (user.OnboardingCompletedAtUtc is not null)
         {
             throw new InvalidOperationException("Essa sessão de onboarding já foi finalizada.");
         }
 
-        session.Cpf = request.Cpf.Trim();
-        session.BirthDate = request.BirthDate;
-        session.Address = request.Address.Trim();
-        session.CurrentStep = Math.Max(session.CurrentStep, 2);
+        user.Cpf = request.Cpf.Trim();
+        user.BirthDate = request.BirthDate;
+        user.Address = request.Address.Trim();
+        user.OnboardingCurrentStep = Math.Max(user.OnboardingCurrentStep, 2);
 
-        onboardingRepository.Update(session);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        var updateResult = await userManager.UpdateAsync(user);
+        if (!updateResult.Succeeded)
+        {
+            var errors = string.Join("; ", updateResult.Errors.Select(x => x.Description));
+            throw new InvalidOperationException(errors);
+        }
 
-        return new OnboardingStepResponseDto(session.Id, 2, 4, "pelada");
+        return new OnboardingStepResponseDto(request.SessionId, 2, 4, "pelada");
     }
 }
