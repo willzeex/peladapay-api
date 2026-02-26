@@ -12,7 +12,7 @@ using PeladaPay.Infrastructure.Data;
 namespace PeladaPay.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260224005050_Initial")]
+    [Migration("20260226223714_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -165,9 +165,20 @@ namespace PeladaPay.Infrastructure.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Address")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateOnly?>("BirthDate")
+                        .HasColumnType("date");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("text");
+
+                    b.Property<string>("Cpf")
+                        .HasMaxLength(14)
+                        .HasColumnType("character varying(14)");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -194,6 +205,28 @@ namespace PeladaPay.Infrastructure.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<DateTime?>("OnboardingCompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OnboardingCrestUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("OnboardingCurrentStep")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("OnboardingFrequency")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("OnboardingGroupName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("OnboardingVenue")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
                     b.Property<string>("PasswordHash")
                         .HasColumnType("text");
 
@@ -212,6 +245,10 @@ namespace PeladaPay.Infrastructure.Migrations
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Whatsapp")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.HasKey("Id");
 
@@ -238,15 +275,29 @@ namespace PeladaPay.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("DueDay")
+                        .HasColumnType("integer");
+
                     b.Property<string>("ExternalSubaccountId")
                         .IsRequired()
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)");
 
+                    b.Property<bool>("IsExpenseManagementOnly")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("MonthlyFee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
                     b.Property<string>("PixKey")
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
+
+                    b.Property<decimal>("SingleMatchFee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.HasKey("Id");
 
@@ -262,12 +313,16 @@ namespace PeladaPay.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("CrestUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<Guid>("FinancialAccountId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("ManagerId")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<string>("Frequency")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<DateTime>("MatchDate")
                         .HasColumnType("timestamp with time zone");
@@ -277,13 +332,46 @@ namespace PeladaPay.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("OrganizerId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Venue")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("FinancialAccountId");
 
-                    b.HasIndex("ManagerId");
+                    b.HasIndex("OrganizerId");
 
                     b.ToTable("Groups");
+                });
+
+            modelBuilder.Entity("PeladaPay.Domain.Entities.GroupPlayer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PlayerId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlayerId");
+
+                    b.HasIndex("GroupId", "PlayerId")
+                        .IsUnique();
+
+                    b.ToTable("GroupPlayers", (string)null);
                 });
 
             modelBuilder.Entity("PeladaPay.Domain.Entities.Player", b =>
@@ -295,8 +383,10 @@ namespace PeladaPay.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("GroupId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -313,7 +403,11 @@ namespace PeladaPay.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("GroupId");
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("Phone")
+                        .IsUnique();
 
                     b.ToTable("Players");
                 });
@@ -420,26 +514,34 @@ namespace PeladaPay.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("PeladaPay.Domain.Entities.ApplicationUser", "Manager")
-                        .WithMany()
-                        .HasForeignKey("ManagerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                    b.HasOne("PeladaPay.Domain.Entities.ApplicationUser", "Organizer")
+                        .WithMany("OrganizedGroups")
+                        .HasForeignKey("OrganizerId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("FinancialAccount");
 
-                    b.Navigation("Manager");
+                    b.Navigation("Organizer");
                 });
 
-            modelBuilder.Entity("PeladaPay.Domain.Entities.Player", b =>
+            modelBuilder.Entity("PeladaPay.Domain.Entities.GroupPlayer", b =>
                 {
                     b.HasOne("PeladaPay.Domain.Entities.Group", "Group")
-                        .WithMany("Players")
+                        .WithMany("GroupPlayers")
                         .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("PeladaPay.Domain.Entities.Player", "Player")
+                        .WithMany("GroupPlayers")
+                        .HasForeignKey("PlayerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Group");
+
+                    b.Navigation("Player");
                 });
 
             modelBuilder.Entity("PeladaPay.Domain.Entities.Transaction", b =>
@@ -453,11 +555,21 @@ namespace PeladaPay.Infrastructure.Migrations
                     b.Navigation("Group");
                 });
 
+            modelBuilder.Entity("PeladaPay.Domain.Entities.ApplicationUser", b =>
+                {
+                    b.Navigation("OrganizedGroups");
+                });
+
             modelBuilder.Entity("PeladaPay.Domain.Entities.Group", b =>
                 {
-                    b.Navigation("Players");
+                    b.Navigation("GroupPlayers");
 
                     b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("PeladaPay.Domain.Entities.Player", b =>
+                {
+                    b.Navigation("GroupPlayers");
                 });
 #pragma warning restore 612, 618
         }

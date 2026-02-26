@@ -32,6 +32,16 @@ namespace PeladaPay.Infrastructure.Migrations
                 {
                     Id = table.Column<string>(type: "text", nullable: false),
                     FullName = table.Column<string>(type: "text", nullable: false),
+                    Whatsapp = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    Cpf = table.Column<string>(type: "character varying(14)", maxLength: 14, nullable: true),
+                    BirthDate = table.Column<DateOnly>(type: "date", nullable: true),
+                    Address = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    OnboardingGroupName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    OnboardingFrequency = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
+                    OnboardingVenue = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: true),
+                    OnboardingCrestUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    OnboardingCurrentStep = table.Column<int>(type: "integer", nullable: false),
+                    OnboardingCompletedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
@@ -60,11 +70,31 @@ namespace PeladaPay.Infrastructure.Migrations
                     Balance = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
                     PixKey = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
                     ExternalSubaccountId = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: false),
+                    MonthlyFee = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    SingleMatchFee = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
+                    DueDay = table.Column<int>(type: "integer", nullable: false),
+                    IsExpenseManagementOnly = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_FinancialAccounts", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Players",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Email = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
+                    Phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    Type = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Players", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -180,19 +210,22 @@ namespace PeladaPay.Infrastructure.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     MatchDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Frequency = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: true),
+                    Venue = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: true),
+                    CrestUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     FinancialAccountId = table.Column<Guid>(type: "uuid", nullable: false),
-                    ManagerId = table.Column<string>(type: "text", nullable: false),
+                    OrganizerId = table.Column<string>(type: "text", nullable: false),
                     CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Groups", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Groups_AspNetUsers_ManagerId",
-                        column: x => x.ManagerId,
+                        name: "FK_Groups_AspNetUsers_OrganizerId",
+                        column: x => x.OrganizerId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Groups_FinancialAccounts_FinancialAccountId",
                         column: x => x.FinancialAccountId,
@@ -202,25 +235,29 @@ namespace PeladaPay.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Players",
+                name: "GroupPlayers",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    Phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    Type = table.Column<int>(type: "integer", nullable: false),
                     GroupId = table.Column<Guid>(type: "uuid", nullable: false),
+                    PlayerId = table.Column<Guid>(type: "uuid", nullable: false),
                     CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Players", x => x.Id);
+                    table.PrimaryKey("PK_GroupPlayers", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Players_Groups_GroupId",
+                        name: "FK_GroupPlayers_Groups_GroupId",
                         column: x => x.GroupId,
                         principalTable: "Groups",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_GroupPlayers_Players_PlayerId",
+                        column: x => x.PlayerId,
+                        principalTable: "Players",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -287,19 +324,37 @@ namespace PeladaPay.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_GroupPlayers_GroupId_PlayerId",
+                table: "GroupPlayers",
+                columns: new[] { "GroupId", "PlayerId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GroupPlayers_PlayerId",
+                table: "GroupPlayers",
+                column: "PlayerId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Groups_FinancialAccountId",
                 table: "Groups",
                 column: "FinancialAccountId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Groups_ManagerId",
+                name: "IX_Groups_OrganizerId",
                 table: "Groups",
-                column: "ManagerId");
+                column: "OrganizerId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Players_GroupId",
+                name: "IX_Players_Email",
                 table: "Players",
-                column: "GroupId");
+                column: "Email",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Players_Phone",
+                table: "Players",
+                column: "Phone",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Transactions_GroupId",
@@ -326,13 +381,16 @@ namespace PeladaPay.Infrastructure.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
-                name: "Players");
+                name: "GroupPlayers");
 
             migrationBuilder.DropTable(
                 name: "Transactions");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
+
+            migrationBuilder.DropTable(
+                name: "Players");
 
             migrationBuilder.DropTable(
                 name: "Groups");
