@@ -23,6 +23,18 @@ Parar o banco:
 docker compose -f docker-compose.db.yml down
 ```
 
+
+## Configuração de CORS
+
+Por padrão em desenvolvimento, a API aceita requisições dos front-ends:
+
+- `http://localhost:3000`
+- `http://localhost:5173`
+
+Para alterar, ajuste `Cors:AllowedOrigins` no arquivo `src/PeladaPay.API/appsettings.Development.json`.
+
+Se a lista estiver vazia, a API libera qualquer origem.
+
 ## Credenciais seed
 
 - Email: `gestor@peladapay.com`
