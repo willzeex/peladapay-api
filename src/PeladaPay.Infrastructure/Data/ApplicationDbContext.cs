@@ -59,8 +59,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<Player>(entity =>
         {
             entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
-            entity.Property(x => x.Email).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.Cpf).HasMaxLength(14).IsRequired();
+            entity.Property(x => x.Email).HasMaxLength(120);
             entity.Property(x => x.Phone).HasMaxLength(20).IsRequired();
+            entity.HasIndex(x => x.Cpf).IsUnique();
             entity.HasIndex(x => x.Email).IsUnique();
             entity.HasIndex(x => x.Phone).IsUnique();
         });
