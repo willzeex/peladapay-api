@@ -19,7 +19,7 @@ public sealed class GetPlayersByGroupQueryHandler(
         var players = await playerRepository.GetAsync(x => playerIds.Contains(x.Id), cancellationToken);
 
         return players
-            .Select(x => new PlayerDto(x.Id, x.Name, x.Email, x.Phone, x.Type.ToString()))
+            .Select(x => new PlayerDto(x.Id, x.Name, x.Cpf, x.Email, x.Phone, x.Type.ToString()))
             .ToList();
     }
 }
