@@ -41,7 +41,7 @@ public class CompleteOnboardingComplianceCommandValidator : AbstractValidator<Co
 
 public class CompleteOnboardingGroupCommandValidator : AbstractValidator<CompleteOnboardingGroupCommand>
 {
-    private static readonly string[] ValidFrequencies = ["Semanal", "Quinzenal", "Mensal"];
+    private static readonly string[] ValidFrequencies = ["semanal", "Quinzenal", "Mensal"];
 
     public CompleteOnboardingGroupCommandValidator()
     {

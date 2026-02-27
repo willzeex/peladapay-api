@@ -6,6 +6,7 @@ using PeladaPay.Application.Common;
 using PeladaPay.Application.Interfaces;
 using PeladaPay.Infrastructure.Data;
 using PeladaPay.Infrastructure.DependencyInjection;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 const string CorsPolicyName = "CorsPolicy";
@@ -36,7 +37,10 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerWithJwt();
 
