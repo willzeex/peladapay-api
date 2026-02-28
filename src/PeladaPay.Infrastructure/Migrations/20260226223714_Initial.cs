@@ -87,7 +87,8 @@ namespace PeladaPay.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    Email = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
+                    Cpf = table.Column<string>(type: "character varying(14)", maxLength: 14, nullable: false),
+                    Email = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: true),
                     Phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     Type = table.Column<int>(type: "integer", nullable: false),
                     CreatedAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
@@ -343,6 +344,12 @@ namespace PeladaPay.Infrastructure.Migrations
                 name: "IX_Groups_OrganizerId",
                 table: "Groups",
                 column: "OrganizerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Players_Cpf",
+                table: "Players",
+                column: "Cpf",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Players_Email",
