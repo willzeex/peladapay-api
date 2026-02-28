@@ -12,7 +12,7 @@ using PeladaPay.Infrastructure.Data;
 namespace PeladaPay.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260226223714_Initial")]
+    [Migration("20260228000901_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -380,11 +380,15 @@ namespace PeladaPay.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Cpf")
+                        .IsRequired()
+                        .HasMaxLength(14)
+                        .HasColumnType("character varying(14)");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Email")
-                        .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
 
@@ -402,6 +406,9 @@ namespace PeladaPay.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Cpf")
+                        .IsUnique();
 
                     b.HasIndex("Email")
                         .IsUnique();
