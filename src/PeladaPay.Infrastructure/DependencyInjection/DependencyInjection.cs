@@ -1,12 +1,19 @@
 using System.Text;
+using Hangfire;
+using Hangfire.MemoryStorage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http.Resilience;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using PeladaPay.Application.Interfaces;
+using PeladaPay.Application.Interfaces.BackgroundJobs;
 using PeladaPay.Domain.Interfaces;
+using PeladaPay.Infrastructure.Asaas;
+using PeladaPay.Infrastructure.BackgroundJobs;
 using PeladaPay.Infrastructure.Data;
 using PeladaPay.Infrastructure.Payments;
 using PeladaPay.Infrastructure.Persistence;
@@ -50,6 +57,32 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddScoped<IPaymentGatewayStrategy, MockPixGatewayStrategy>();
+
+        services.AddOptions<AsaasOptions>()
+            .Bind(configuration.GetSection(AsaasOptions.SectionName))
+            .Validate(options => Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out _), "Asaas:BaseUrl must be a valid absolute URL.")
+            .ValidateOnStart();
+
+        services.AddHttpClient<IAsaasService, AsaasService>((sp, client) =>
+            {
+                var options = sp.GetRequiredService<IOptions<AsaasOptions>>().Value;
+                client.BaseAddress = new Uri(options.BaseUrl);
+            })
+            .AddResilienceHandler("asaas-http", resilience =>
+            {
+                resilience.AddRetry(new HttpRetryStrategyOptions
+                {
+                    MaxRetryAttempts = 3,
+                    Delay = TimeSpan.FromSeconds(2),
+                    BackoffType = DelayBackoffType.Exponential,
+                    UseJitter = true
+                });
+            });
+
+        services.AddHangfire(config => config.UseMemoryStorage());
+        services.AddHangfireServer();
+        services.AddScoped<AsaasSubaccountRetryJob>();
+        services.AddScoped<IAsaasSubaccountJobScheduler, AsaasSubaccountJobScheduler>();
 
         return services;
     }

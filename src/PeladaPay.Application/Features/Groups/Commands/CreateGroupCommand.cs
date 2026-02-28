@@ -1,6 +1,8 @@
 using MediatR;
+using Microsoft.Extensions.Logging;
 using PeladaPay.Application.DTOs;
 using PeladaPay.Application.Interfaces;
+using PeladaPay.Application.Interfaces.BackgroundJobs;
 using PeladaPay.Domain.Entities;
 using PeladaPay.Domain.Interfaces;
 
@@ -12,7 +14,10 @@ public sealed class CreateGroupCommandHandler(
     IRepository<Group> groupRepository,
     IRepository<FinancialAccount> accountRepository,
     ICurrentUserService currentUserService,
-    IUnitOfWork unitOfWork) : IRequestHandler<CreateGroupCommand, GroupDto>
+    IUnitOfWork unitOfWork,
+    IMediator mediator,
+    IAsaasSubaccountJobScheduler jobScheduler,
+    ILogger<CreateGroupCommandHandler> logger) : IRequestHandler<CreateGroupCommand, GroupDto>
 {
     public async Task<GroupDto> Handle(CreateGroupCommand request, CancellationToken cancellationToken)
     {
@@ -22,7 +27,7 @@ public sealed class CreateGroupCommandHandler(
         {
             Balance = 0,
             PixKey = request.PixKey,
-            ExternalSubaccountId = $"subacc_{Guid.NewGuid():N}" // mock BaaS
+            ExternalSubaccountId = string.Empty
         };
 
         await accountRepository.AddAsync(account, cancellationToken);
@@ -38,6 +43,16 @@ public sealed class CreateGroupCommandHandler(
         await groupRepository.AddAsync(group, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new GroupDto(group.Id, group.Name, group.MatchDate, group.FinancialAccountId, account.ExternalSubaccountId);
+        try
+        {
+            var subaccountResult = await mediator.Send(new CreateAsaasSubaccountCommand(group.Id), cancellationToken);
+            return new GroupDto(group.Id, group.Name, group.MatchDate, group.FinancialAccountId, subaccountResult.ExternalSubaccountId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Group created but ASAAS subaccount creation failed for group {GroupId}.", group.Id);
+            jobScheduler.ScheduleCreateSubaccount(group.Id);
+            return new GroupDto(group.Id, group.Name, group.MatchDate, group.FinancialAccountId, account.ExternalSubaccountId);
+        }
     }
 }
