@@ -28,6 +28,21 @@ public class GroupsController(IMediator mediator, ICurrentUserService currentUse
             result));
     }
 
+
+    [HttpPost("{groupId:guid}/asaas-subaccount")]
+    [ProducesResponseType(typeof(ApiResponse<AsaasSubaccountDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CreateAsaasSubaccount(Guid groupId, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new CreateAsaasSubaccountCommand(groupId), cancellationToken);
+        return StatusCode(StatusCodes.Status200OK, new ApiResponse<AsaasSubaccountDto>(
+            StatusCodes.Status200OK,
+            result.AlreadyExisted ? "Subconta ASAAS já estava vinculada." : "Subconta ASAAS criada com sucesso.",
+            result));
+    }
+
     [HttpPost("{groupId:guid}/players")]
     [ProducesResponseType(typeof(ApiResponse<PlayerDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiValidationErrorResponse), StatusCodes.Status400BadRequest)]

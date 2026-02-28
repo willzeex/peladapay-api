@@ -1,6 +1,8 @@
 using System.Net;
 using FluentValidation;
 using PeladaPay.API.Contracts;
+using PeladaPay.Application.Exceptions;
+using PeladaPay.Domain.Exceptions;
 
 namespace PeladaPay.API.Middlewares;
 
@@ -19,6 +21,16 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 context.Response.StatusCode,
                 "Erro de validação",
                 ex.Errors.Select(x => x.ErrorMessage).ToList()));
+        }
+        catch (NotFoundException ex)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+            await context.Response.WriteAsJsonAsync(new ApiErrorResponse(context.Response.StatusCode, ex.Message));
+        }
+        catch (AsaasIntegrationException ex)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.UnprocessableEntity;
+            await context.Response.WriteAsJsonAsync(new ApiErrorResponse(context.Response.StatusCode, ex.Message));
         }
         catch (UnauthorizedAccessException ex)
         {

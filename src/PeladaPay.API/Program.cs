@@ -1,3 +1,4 @@
+using Hangfire;
 using FluentValidation;
 using PeladaPay.API.Configurations;
 using PeladaPay.API.Middlewares;
@@ -57,6 +58,7 @@ app.UseCors(CorsPolicyName);
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.UseHangfireDashboard("/hangfire");
 
 using (var scope = app.Services.CreateScope())
 {
