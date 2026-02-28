@@ -1,5 +1,6 @@
 using MediatR;
 using PeladaPay.Application.DTOs;
+using PeladaPay.Application.Features.Groups.Commands.Strategies;
 using PeladaPay.Application.Interfaces;
 using PeladaPay.Domain.Entities;
 using PeladaPay.Domain.Enums;
@@ -10,7 +11,8 @@ namespace PeladaPay.Application.Features.Groups.Commands;
 public sealed record AddPlayerToGroupCommand(
     Guid GroupId,
     string Name,
-    string Email,
+    string Cpf,
+    string? Email,
     string Phone,
     PlayerType Type) : IRequest<PlayerDto>;
 
@@ -18,6 +20,7 @@ public sealed class AddPlayerToGroupCommandHandler(
     IRepository<Group> groupRepository,
     IRepository<Player> playerRepository,
     IRepository<GroupPlayer> groupPlayerRepository,
+    IEnumerable<IPlayerUpsertStrategy> playerUpsertStrategies,
     ICurrentUserService currentUserService,
     IUnitOfWork unitOfWork) : IRequestHandler<AddPlayerToGroupCommand, PlayerDto>
 {
@@ -33,23 +36,13 @@ public sealed class AddPlayerToGroupCommandHandler(
             throw new UnauthorizedAccessException("Acesso negado ao grupo.");
         }
 
-        var email = request.Email.Trim().ToLowerInvariant();
-        var phone = request.Phone.Trim();
+        var cpf = request.Cpf.Trim();
+        var existingPlayer = (await playerRepository.GetAsync(x => x.Cpf == cpf, cancellationToken)).FirstOrDefault();
 
-        var player = (await playerRepository.GetAsync(x => x.Email == email || x.Phone == phone, cancellationToken)).FirstOrDefault();
+        var upsertStrategy = playerUpsertStrategies.FirstOrDefault(x => x.CanHandle(existingPlayer))
+            ?? throw new InvalidOperationException("Estratégia de cadastro de jogador não encontrada.");
 
-        if (player is null)
-        {
-            player = new Player
-            {
-                Name = request.Name,
-                Email = email,
-                Phone = phone,
-                Type = request.Type
-            };
-
-            await playerRepository.AddAsync(player, cancellationToken);
-        }
+        var player = await upsertStrategy.UpsertAsync(existingPlayer, request with { Cpf = cpf }, cancellationToken);
 
         var alreadyInGroup = (await groupPlayerRepository
             .GetAsync(x => x.GroupId == request.GroupId && x.PlayerId == player.Id, cancellationToken))
@@ -65,6 +58,6 @@ public sealed class AddPlayerToGroupCommandHandler(
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        return new PlayerDto(player.Id, player.Name, player.Email, player.Phone, player.Type.ToString());
+        return new PlayerDto(player.Id, player.Name, player.Cpf, player.Email, player.Phone, player.Type.ToString());
     }
 }

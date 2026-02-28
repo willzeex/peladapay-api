@@ -32,7 +32,11 @@ public class AddPlayerToGroupCommandValidator : AbstractValidator<AddPlayerToGro
     {
         RuleFor(x => x.GroupId).NotEqual(Guid.Empty);
         RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(120);
+        RuleFor(x => x.Cpf).NotEmpty().MaximumLength(14);
+        RuleFor(x => x.Type)
+            .IsInEnum()
+            .NotEqual((PeladaPay.Domain.Enums.PlayerType)0);
+        RuleFor(x => x.Email).MaximumLength(120).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Email));
         RuleFor(x => x.Phone).NotEmpty().MaximumLength(20);
     }
 }

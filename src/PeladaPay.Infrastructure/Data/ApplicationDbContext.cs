@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using PeladaPay.Domain.Entities;
+using PeladaPay.Infrastructure.Data.Configurations;
 
 namespace PeladaPay.Infrastructure.Data;
 
@@ -56,14 +57,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                     });
         });
 
-        builder.Entity<Player>(entity =>
-        {
-            entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
-            entity.Property(x => x.Email).HasMaxLength(120).IsRequired();
-            entity.Property(x => x.Phone).HasMaxLength(20).IsRequired();
-            entity.HasIndex(x => x.Email).IsUnique();
-            entity.HasIndex(x => x.Phone).IsUnique();
-        });
+        builder.ApplyConfiguration(new PlayerConfiguration());
 
         builder.Entity<GroupPlayer>(entity =>
         {
