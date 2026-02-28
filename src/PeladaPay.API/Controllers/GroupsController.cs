@@ -42,6 +42,29 @@ public class GroupsController(IMediator mediator, ICurrentUserService currentUse
             result));
     }
 
+
+    [HttpPatch("{groupId:guid}")]
+    [ProducesResponseType(typeof(ApiResponse<GroupDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiValidationErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UpdateGroupSettings(Guid groupId, [FromBody] UpdateGroupSettingsRequest request, CancellationToken cancellationToken)
+    {
+        var command = new UpdateGroupSettingsCommand(
+            groupId,
+            request.Name,
+            request.MatchDate,
+            request.Frequency,
+            request.Venue,
+            request.CrestUrl);
+
+        var result = await mediator.Send(command, cancellationToken);
+        return StatusCode(StatusCodes.Status200OK, new ApiResponse<GroupDto>(
+            StatusCodes.Status200OK,
+            "Configurações do grupo atualizadas com sucesso.",
+            result));
+    }
+
     [HttpGet("my")]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyCollection<GroupDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
@@ -82,3 +105,11 @@ public class GroupsController(IMediator mediator, ICurrentUserService currentUse
             result));
     }
 }
+
+
+public sealed record UpdateGroupSettingsRequest(
+    string? Name,
+    DateTime? MatchDate,
+    string? Frequency,
+    string? Venue,
+    string? CrestUrl);
