@@ -65,6 +65,21 @@ public class GroupsController(IMediator mediator, ICurrentUserService currentUse
             result));
     }
 
+
+    [HttpGet("{groupId:guid}")]
+    [ProducesResponseType(typeof(ApiResponse<GroupSettingsDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetGroupSettings(Guid groupId, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetGroupSettingsQuery(groupId), cancellationToken);
+        return StatusCode(StatusCodes.Status200OK, new ApiResponse<GroupSettingsDto>(
+            StatusCodes.Status200OK,
+            "Configurações do grupo consultadas com sucesso.",
+            result));
+    }
+
     [HttpGet("my")]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyCollection<GroupDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
