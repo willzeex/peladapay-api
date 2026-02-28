@@ -41,6 +41,20 @@ public class UsersController(IMediator mediator) : ControllerBase
             result));
     }
 
+
+    [HttpGet("onboarding")]
+    [ProducesResponseType(typeof(ApiResponse<GetUserOnboardingSettingsResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetOnboarding(CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetUserOnboardingSettingsQuery(), cancellationToken);
+        return StatusCode(StatusCodes.Status200OK, new ApiResponse<GetUserOnboardingSettingsResponse>(
+            StatusCodes.Status200OK,
+            "Configurações de onboarding consultadas com sucesso.",
+            result));
+    }
+
     [HttpPatch("onboarding")]
     [ProducesResponseType(typeof(ApiResponse<UpdateUserOnboardingSettingsResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiValidationErrorResponse), StatusCodes.Status400BadRequest)]
