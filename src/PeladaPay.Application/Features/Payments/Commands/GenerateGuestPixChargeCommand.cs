@@ -6,6 +6,7 @@ using PeladaPay.Domain.Entities;
 using PeladaPay.Domain.Enums;
 using PeladaPay.Domain.Exceptions;
 using PeladaPay.Domain.Interfaces;
+using Microsoft.AspNetCore.Identity;
 
 namespace PeladaPay.Application.Features.Payments.Commands;
 
@@ -14,7 +15,7 @@ public sealed record GenerateGuestPixChargeCommand(Guid GroupId, string? GuestNa
 public sealed class GenerateGuestPixChargeCommandHandler(
     IRepository<Group> groupRepository,
     IRepository<FinancialAccount> financialAccountRepository,
-    IRepository<ApplicationUser> applicationUserRepository,
+    UserManager<ApplicationUser> userManager,
     IRepository<Transaction> transactionRepository,
     IPaymentGatewayStrategy paymentGatewayStrategy,
     IUnitOfWork unitOfWork)
@@ -38,7 +39,7 @@ public sealed class GenerateGuestPixChargeCommandHandler(
             throw new AsaasIntegrationException("Taxa avulsa inválida para gerar cobrança de convidado.");
 
         var guestName = string.IsNullOrWhiteSpace(request.GuestName) ? DefaultGuestName : request.GuestName.Trim();
-        var payerCpf = await ResolvePayerCpfAsync(group.OrganizerId, cancellationToken);
+        var payerCpf = await ResolvePayerCpfAsync(group.OrganizerId);
 
         var (chargeId, qrCode, paymentLink) = await paymentGatewayStrategy.CreatePixChargeAsync(
             financialAccount.SingleMatchFee,
@@ -75,9 +76,9 @@ public sealed class GenerateGuestPixChargeCommandHandler(
             paymentLink);
     }
 
-    private async Task<string> ResolvePayerCpfAsync(string organizerId, CancellationToken cancellationToken)
+    private async Task<string> ResolvePayerCpfAsync(string organizerId)
     {
-        var organizer = await applicationUserRepository.GetByIdAsync(organizerId, cancellationToken);
+        var organizer = await userManager.FindByIdAsync(organizerId);
         var sanitizedCpf = SanitizeDigits(organizer?.Cpf);
 
         return sanitizedCpf.Length == 11 ? sanitizedCpf : DefaultCpf;
