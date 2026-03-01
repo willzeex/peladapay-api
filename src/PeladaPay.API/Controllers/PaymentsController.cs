@@ -30,6 +30,26 @@ public class PaymentsController(IMediator mediator) : ControllerBase
             result));
     }
 
+
+
+    /// <summary>
+    /// Gera uma cobrança PIX para um jogador convidado que não precisa estar vinculado ao grupo.
+    /// </summary>
+    [HttpPost("pix/guest")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<GuestPixChargeDto>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiValidationErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GenerateGuestPix([FromBody] GenerateGuestPixChargeCommand command, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(command, cancellationToken);
+        return StatusCode(StatusCodes.Status201Created, new ApiResponse<GuestPixChargeDto>(
+            StatusCodes.Status201Created,
+            "Cobrança PIX para convidado gerada com sucesso.",
+            result));
+    }
+
     /// <summary>
     /// Endpoint genérico para confirmação de pagamento a partir de integrações externas.
     /// </summary>
