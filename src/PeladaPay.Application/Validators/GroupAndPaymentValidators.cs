@@ -21,7 +21,7 @@ public class GeneratePixChargeCommandValidator : AbstractValidator<GeneratePixCh
     public GeneratePixChargeCommandValidator()
     {
         RuleFor(x => x.GroupId).NotEqual(Guid.Empty);
-        RuleFor(x => x.PlayerName).NotEmpty();
+        RuleFor(x => x.PlayerId).NotEqual(Guid.Empty);
         RuleFor(x => x.Description).NotEmpty().MaximumLength(150);
         RuleFor(x => x.Amount).GreaterThan(0);
     }
@@ -47,7 +47,8 @@ public class ConfirmPaymentWebhookCommandValidator : AbstractValidator<ConfirmPa
     public ConfirmPaymentWebhookCommandValidator()
     {
         RuleFor(x => x.ChargeId).NotEmpty();
-        RuleFor(x => x.ReceiptUrl).NotEmpty().Must(u => Uri.IsWellFormedUriString(u, UriKind.Absolute));
+        RuleFor(x => x.ReceiptUrl)
+            .Must(u => string.IsNullOrWhiteSpace(u) || Uri.IsWellFormedUriString(u, UriKind.Absolute));
     }
 }
 

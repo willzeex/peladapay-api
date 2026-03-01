@@ -10,6 +10,22 @@ internal sealed record AsaasCreateAccountApiRequest(
 
 internal sealed record AsaasCreateAccountApiResponse([property: JsonPropertyName("id")] string Id);
 
+internal sealed record AsaasCreatePaymentApiRequest(
+    [property: JsonPropertyName("customer")] string Customer,
+    [property: JsonPropertyName("billingType")] string BillingType,
+    [property: JsonPropertyName("value")] decimal Value,
+    [property: JsonPropertyName("dueDate")] DateOnly DueDate,
+    [property: JsonPropertyName("description")] string Description,
+    [property: JsonPropertyName("externalReference")] string ExternalReference);
+
+internal sealed record AsaasCreatePaymentApiResponse(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("invoiceUrl")] string InvoiceUrl,
+    [property: JsonPropertyName("pixTransaction")] AsaasPixTransactionApiResponse? PixTransaction);
+
+internal sealed record AsaasPixTransactionApiResponse(
+    [property: JsonPropertyName("payload")] string Payload);
+
 internal sealed class AsaasErrorResponse
 {
     [JsonPropertyName("errors")]
