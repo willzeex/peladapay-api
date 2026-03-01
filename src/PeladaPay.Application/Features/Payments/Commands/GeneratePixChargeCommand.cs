@@ -37,6 +37,7 @@ public sealed class GeneratePixChargeCommandHandler(
             player.Name,
             player.Cpf,
             player.Email,
+            player.Phone,
             cancellationToken);
 
         var transaction = new Transaction
