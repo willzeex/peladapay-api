@@ -27,6 +27,23 @@ public class GeneratePixChargeCommandValidator : AbstractValidator<GeneratePixCh
     }
 }
 
+
+public class GenerateGuestPixChargeCommandValidator : AbstractValidator<GenerateGuestPixChargeCommand>
+{
+    public GenerateGuestPixChargeCommandValidator()
+    {
+        RuleFor(x => x.GroupId).NotEqual(Guid.Empty);
+        RuleFor(x => x.GuestName).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.GuestCpf).NotEmpty().MaximumLength(14);
+        RuleFor(x => x.GuestEmail)
+            .MaximumLength(120)
+            .EmailAddress()
+            .When(x => !string.IsNullOrWhiteSpace(x.GuestEmail));
+        RuleFor(x => x.Description).NotEmpty().MaximumLength(150);
+        RuleFor(x => x.Amount).GreaterThan(0);
+    }
+}
+
 public class AddPlayerToGroupCommandValidator : AbstractValidator<AddPlayerToGroupCommand>
 {
     public AddPlayerToGroupCommandValidator()
