@@ -12,6 +12,9 @@ namespace PeladaPay.API.Controllers;
 [Route("api/[controller]")]
 public class PaymentsController(IMediator mediator) : ControllerBase
 {
+    /// <summary>
+    /// Gera uma cobrança PIX para um jogador do grupo.
+    /// </summary>
     [HttpPost("pix")]
     [Authorize]
     [ProducesResponseType(typeof(ApiResponse<PixChargeDto>), StatusCodes.Status201Created)]
@@ -27,6 +30,9 @@ public class PaymentsController(IMediator mediator) : ControllerBase
             result));
     }
 
+    /// <summary>
+    /// Endpoint genérico para confirmação de pagamento a partir de integrações externas.
+    /// </summary>
     [HttpPost("webhook")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
