@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace PeladaPay.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class AddPlayerPaymentLinkToTransaction : Migration
+    public partial class AddPaymentLink : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

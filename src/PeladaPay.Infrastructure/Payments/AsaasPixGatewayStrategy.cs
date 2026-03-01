@@ -23,7 +23,7 @@ public sealed class AsaasPixGatewayStrategy(IAsaasService asaasService) : IPayme
 
         var createPaymentResponse = await asaasService.CreatePixPaymentAsync(
             new AsaasCreatePixPaymentRequest(
-                createCustomerResponse.SubaccountId,
+                createCustomerResponse.Id,
                 amount,
                 $"Pagamento PeladaPay - {payerName}",
                 Guid.NewGuid().ToString("N"),
