@@ -10,6 +10,7 @@ public class MockPixGatewayStrategy : IPaymentGatewayStrategy
         string payerName,
         string payerCpf,
         string? payerEmail,
+        string? payerPhone,
         CancellationToken cancellationToken)
     {
         var chargeId = $"charge_{Guid.NewGuid():N}";

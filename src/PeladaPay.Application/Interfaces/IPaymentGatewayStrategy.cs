@@ -10,5 +10,6 @@ public interface IPaymentGatewayStrategy
         string payerName,
         string payerCpf,
         string? payerEmail,
+        string? payerPhone,
         CancellationToken cancellationToken);
 }
