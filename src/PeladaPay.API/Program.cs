@@ -1,5 +1,4 @@
 using Hangfire;
-using FluentValidation;
 using PeladaPay.API.Configurations;
 using PeladaPay.API.Middlewares;
 using PeladaPay.API.Services;
@@ -13,7 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 const string CorsPolicyName = "CorsPolicy";
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-    ?? Array.Empty<string>();
+    ?? [];
 
 builder.Services.AddCors(options =>
 {

@@ -19,6 +19,7 @@ using PeladaPay.Infrastructure.Payments;
 using PeladaPay.Infrastructure.Persistence;
 using PeladaPay.Infrastructure.Services;
 using PeladaPay.Domain.Entities;
+using Polly;
 
 namespace PeladaPay.Infrastructure.DependencyInjection;
 

@@ -19,12 +19,10 @@ public sealed class AsaasService(
     {
         var options = asaasOptions.Value;
         if (string.IsNullOrWhiteSpace(options.ApiKey))
-        {
             throw new AsaasIntegrationException("ASAAS API key não configurada.");
-        }
 
         var correlationId = Guid.NewGuid().ToString("N");
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "accounts")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "customers")
         {
             Content = JsonContent.Create(new AsaasCreateAccountApiRequest(
                 request.Name,
@@ -33,6 +31,9 @@ public sealed class AsaasService(
                 request.MobilePhone))
         };
 
+        // REQUIRED by ASAAS
+        httpRequest.Headers.UserAgent.ParseAdd("PeladaPay/1.0");
+        httpRequest.Headers.Add("Accept", "application/json");
         httpRequest.Headers.Add("access_token", options.ApiKey);
         httpRequest.Headers.Add("X-Correlation-Id", correlationId);
 
@@ -47,14 +48,9 @@ public sealed class AsaasService(
             {
                 var parsed = JsonSerializer.Deserialize<AsaasErrorResponse>(body, JsonOptions);
                 if (parsed?.Errors.Count > 0)
-                {
                     reason = string.Join("; ", parsed.Errors.Select(x => $"{x.Code}: {x.Description}"));
-                }
             }
-            catch
-            {
-                // keep raw body when parse fails
-            }
+            catch { }
 
             logger.LogError(
                 "ASAAS create account failed. StatusCode: {StatusCode}, CorrelationId: {CorrelationId}, Reason: {Reason}",
@@ -69,9 +65,7 @@ public sealed class AsaasService(
             ?? throw new AsaasIntegrationException("Resposta inválida da API ASAAS.");
 
         if (string.IsNullOrWhiteSpace(payload.Id))
-        {
             throw new AsaasIntegrationException("Resposta da API ASAAS não contém id da subconta.");
-        }
 
         return new AsaasCreateAccountResponse(payload.Id);
     }
