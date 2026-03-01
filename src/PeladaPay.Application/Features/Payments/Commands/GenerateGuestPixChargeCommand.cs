@@ -39,17 +39,18 @@ public sealed class GenerateGuestPixChargeCommandHandler(
             throw new AsaasIntegrationException("Taxa avulsa inválida para gerar cobrança de convidado.");
 
         var guestName = string.IsNullOrWhiteSpace(request.GuestName) ? DefaultGuestName : request.GuestName.Trim();
-        var payerCpf = await ResolvePayerCpfAsync(group.OrganizerId);
+        var customerDocumentNumber = await ResolvePayerCpfAsync(group.OrganizerId);
 
         var (chargeId, qrCode, paymentLink) = await paymentGatewayStrategy.CreatePixChargeAsync(
+            financialAccount.ExternalSubaccountId,
             financialAccount.SingleMatchFee,
             guestName,
-            payerCpf,
+            customerDocumentNumber,
             null,
             request.GuestPhone,
             cancellationToken);
 
-        var description = $"Pagamento avulso de convidado - {group.Name}";
+        var description = $"Pagamento avulso de convidado - {request.GuestName ?? request.GuestPhone ?? group.Name}";
         var transaction = new Transaction
         {
             GroupId = group.Id,

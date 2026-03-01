@@ -14,6 +14,8 @@ public sealed class GeneratePixChargeCommandHandler(
     IRepository<Transaction> transactionRepository,
     IRepository<Player> playerRepository,
     IRepository<GroupPlayer> groupPlayerRepository,
+    IRepository<FinancialAccount> financialAccountRepository,
+    IRepository<Group> groupRepository,
     IPaymentGatewayStrategy paymentGatewayStrategy,
     IUnitOfWork unitOfWork) : IRequestHandler<GeneratePixChargeCommand, PixChargeDto>
 {
@@ -25,6 +27,9 @@ public sealed class GeneratePixChargeCommandHandler(
         var player = await playerRepository.GetByIdAsync(request.PlayerId, cancellationToken)
             ?? throw new NotFoundException("Jogador não encontrado.");
 
+        var group = await groupRepository.GetByIdAsync(request.GroupId, cancellationToken)
+            ?? throw new NotFoundException("Grupo não encontrado.");
+
         var isPlayerInGroup = (await groupPlayerRepository.GetAsync(
             gp => gp.GroupId == request.GroupId && gp.PlayerId == request.PlayerId,
             cancellationToken)).Any();
@@ -32,7 +37,11 @@ public sealed class GeneratePixChargeCommandHandler(
         if (!isPlayerInGroup)
             throw new NotFoundException("Jogador não está vinculado ao grupo informado.");
 
+        var financialAccount = await financialAccountRepository.GetByIdAsync(group.FinancialAccountId, cancellationToken)
+            ?? throw new NotFoundException("Conta financeira do grupo não encontrada.");
+
         var (chargeId, qrCode, paymentLink) = await paymentGatewayStrategy.CreatePixChargeAsync(
+            financialAccount.ExternalSubaccountId,
             request.Amount,
             player.Name,
             player.Cpf,

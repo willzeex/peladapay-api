@@ -6,9 +6,10 @@ public class MockPixGatewayStrategy : IPaymentGatewayStrategy
 {
     /// <inheritdoc />
     public Task<(string chargeId, string qrCode, string paymentLink)> CreatePixChargeAsync(
+        string customerId,
         decimal amount,
         string payerName,
-        string payerCpf,
+        string? payerCpf,
         string? payerEmail,
         string? payerPhone,
         CancellationToken cancellationToken)

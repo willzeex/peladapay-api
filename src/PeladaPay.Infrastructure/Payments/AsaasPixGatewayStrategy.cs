@@ -5,26 +5,19 @@ namespace PeladaPay.Infrastructure.Payments;
 
 public sealed class AsaasPixGatewayStrategy(IAsaasService asaasService) : IPaymentGatewayStrategy
 {
-    /// <inheritdoc />
+    /// <inheritdoc />  
     public async Task<(string chargeId, string qrCode, string paymentLink)> CreatePixChargeAsync(
+        string customerId,
         decimal amount,
         string payerName,
-        string payerCpf,
+        string? payerCpf, // Updated to match the nullability of the interface  
         string? payerEmail,
         string? payerPhone,
         CancellationToken cancellationToken)
     {
-        var createCustomerResponse = await asaasService.CreateSubaccountAsync(
-            new AsaasCreateAccountRequest(
-                payerName,
-                payerEmail ?? $"{Guid.NewGuid():N}@peladapay.local",
-                SanitizeDocument(payerCpf),
-                payerPhone),
-            cancellationToken);
-
         var createPaymentResponse = await asaasService.CreatePixPaymentAsync(
             new AsaasCreatePixPaymentRequest(
-                createCustomerResponse.Id,
+                customerId,
                 amount,
                 $"Pagamento PeladaPay - {payerName}",
                 Guid.NewGuid().ToString("N"),
@@ -33,7 +26,4 @@ public sealed class AsaasPixGatewayStrategy(IAsaasService asaasService) : IPayme
 
         return (createPaymentResponse.PaymentId, createPaymentResponse.PixCode, createPaymentResponse.InvoiceUrl);
     }
-
-    private static string SanitizeDocument(string document)
-        => new(document.Where(char.IsDigit).ToArray());
 }
