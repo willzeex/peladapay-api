@@ -68,7 +68,34 @@ public sealed class AsaasService(
         if (string.IsNullOrWhiteSpace(payload.Id) || string.IsNullOrWhiteSpace(payload.InvoiceUrl))
             throw new AsaasIntegrationException("Resposta da API ASAAS não contém dados essenciais da cobrança PIX.");
 
-        return new AsaasCreatePixPaymentResponse(payload.Id, payload.PixTransaction?.Payload ?? string.Empty, payload.InvoiceUrl);
+        var pixPayload = payload.PixTransaction?.Payload;
+        if (string.IsNullOrWhiteSpace(pixPayload))
+            pixPayload = await GetPixQrCodeAsync(payload.Id, cancellationToken);
+
+        return new AsaasCreatePixPaymentResponse(payload.Id, pixPayload!, payload.InvoiceUrl);
+    }
+
+
+    /// <inheritdoc />
+    public async Task<string> GetPixQrCodeAsync(string paymentId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(paymentId))
+            throw new AsaasIntegrationException("Id da cobrança PIX inválido para obtenção do QR Code.");
+
+        var (options, correlationId) = ValidateConfiguration();
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, $"payments/{paymentId}/pixQrCode");
+        AddDefaultHeaders(httpRequest, options.ApiKey, correlationId);
+
+        using var response = await httpClient.SendAsync(httpRequest, cancellationToken);
+        await EnsureSuccessResponseAsync(response, correlationId, "consultar QR Code PIX", cancellationToken);
+
+        var payload = await response.Content.ReadFromJsonAsync<AsaasGetPixQrCodeApiResponse>(JsonOptions, cancellationToken)
+            ?? throw new AsaasIntegrationException("Resposta inválida da API ASAAS ao consultar QR Code PIX.");
+
+        if (string.IsNullOrWhiteSpace(payload.Payload))
+            throw new AsaasIntegrationException("Resposta da API ASAAS não contém payload PIX.");
+
+        return payload.Payload;
     }
 
     private (AsaasOptions options, string correlationId) ValidateConfiguration()

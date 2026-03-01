@@ -13,4 +13,9 @@ public interface IAsaasService
     /// Cria uma cobrança PIX para o cliente informado.
     /// </summary>
     Task<AsaasCreatePixPaymentResponse> CreatePixPaymentAsync(AsaasCreatePixPaymentRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Obtém o payload do QR Code PIX para uma cobrança já criada.
+    /// </summary>
+    Task<string> GetPixQrCodeAsync(string paymentId, CancellationToken cancellationToken);
 }

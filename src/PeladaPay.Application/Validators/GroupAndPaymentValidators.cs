@@ -27,6 +27,21 @@ public class GeneratePixChargeCommandValidator : AbstractValidator<GeneratePixCh
     }
 }
 
+
+public class GenerateGuestPixChargeCommandValidator : AbstractValidator<GenerateGuestPixChargeCommand>
+{
+    public GenerateGuestPixChargeCommandValidator()
+    {
+        RuleFor(x => x.GroupId).NotEqual(Guid.Empty);
+        RuleFor(x => x.GuestName)
+            .MaximumLength(100)
+            .When(x => !string.IsNullOrWhiteSpace(x.GuestName));
+        RuleFor(x => x.GuestPhone)
+            .MaximumLength(20)
+            .When(x => !string.IsNullOrWhiteSpace(x.GuestPhone));
+    }
+}
+
 public class AddPlayerToGroupCommandValidator : AbstractValidator<AddPlayerToGroupCommand>
 {
     public AddPlayerToGroupCommandValidator()

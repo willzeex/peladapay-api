@@ -11,6 +11,7 @@ public sealed class AsaasPixGatewayStrategy(IAsaasService asaasService) : IPayme
         string payerName,
         string payerCpf,
         string? payerEmail,
+        string? payerPhone,
         CancellationToken cancellationToken)
     {
         var createCustomerResponse = await asaasService.CreateSubaccountAsync(
@@ -18,7 +19,7 @@ public sealed class AsaasPixGatewayStrategy(IAsaasService asaasService) : IPayme
                 payerName,
                 payerEmail ?? $"{Guid.NewGuid():N}@peladapay.local",
                 SanitizeDocument(payerCpf),
-                null),
+                payerPhone),
             cancellationToken);
 
         var createPaymentResponse = await asaasService.CreatePixPaymentAsync(
