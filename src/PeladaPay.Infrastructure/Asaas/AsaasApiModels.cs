@@ -40,3 +40,7 @@ internal sealed class AsaasApiError
     [JsonPropertyName("description")]
     public string Description { get; set; } = string.Empty;
 }
+
+
+internal sealed record AsaasGetPixQrCodeApiResponse(
+    [property: JsonPropertyName("payload")] string Payload);
