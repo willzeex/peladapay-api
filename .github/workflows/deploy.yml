@@ -38,8 +38,8 @@ jobs:
           MIGRATION=$(date +%Y%m%d%H%M)
 
           dotnet ef migrations script \
-            --project src/PeladaPay.Infrastructure \
-            --startup-project src/PeladaPay.Api \
+            --project src/PeladaPay.Infrastructure/PeladaPay.Infrastructure.csproj
+            --startup-project src/PeladaPay.Api/PeladaPay.Api.csproj
             --idempotent \
             --output deploy/migrations/${MIGRATION}_migration.sql
 
