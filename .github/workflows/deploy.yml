@@ -20,12 +20,12 @@ jobs:
           dotnet-version: 9.0.x
 
       - name: Restore
-        # Adicionamos o -r linux-x64 para preparar os assets do projeto
-        run: dotnet restore -r linux-x64
+        # Restauramos focando no projeto da API para evitar erro de .sln com runtime
+        run: dotnet restore src/PeladaPay.Api/PeladaPay.Api.csproj -r linux-x64
 
       - name: Build
-        # O Build também precisa saber do runtime para o bundle
-        run: dotnet build --configuration Release --no-restore -r linux-x64
+        # Compilamos o projeto da API com o runtime correto para o bundle
+        run: dotnet build src/PeladaPay.Api/PeladaPay.Api.csproj --configuration Release --no-restore -r linux-x64
 
       - name: Install EF CLI
         run: dotnet tool install --global dotnet-ef
@@ -35,7 +35,7 @@ jobs:
           export PATH="$PATH:$HOME/.dotnet/tools"
           mkdir -p deploy
           
-          # Agora o bundle encontrará os assets para linux-x64
+          # Gera o bundle nativo para o Linux da Oracle Cloud
           dotnet ef migrations bundle \
             --project src/PeladaPay.Infrastructure/PeladaPay.Infrastructure.csproj \
             --startup-project src/PeladaPay.Api/PeladaPay.Api.csproj \
@@ -95,11 +95,11 @@ jobs:
             set -e
             cd ~/apps/peladapay-api
             
-            # Garante permissão de execução
+            # Dá permissão de execução ao binário de migração
             chmod +x ./migrate
 
             echo "Running database migrations..."
-            # Passando a connection string via argumento (padrão do bundle)
+            # Executa a migração usando a connection string do segredo do GitHub
             ./migrate --connection "Host=localhost;Port=5432;Database=${{ vars.POSTGRES_DB }};Username=${{ vars.POSTGRES_USER }};Password=${{ secrets.POSTGRES_PASSWORD }}"
 
             echo "Updating Environment File..."
@@ -108,8 +108,10 @@ jobs:
             ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=${{ vars.POSTGRES_DB }};Username=${{ vars.POSTGRES_USER }};Password=${{ secrets.POSTGRES_PASSWORD }}
             EOF
 
-            echo "Deploying Docker Containers..."
+            echo "Logging into GHCR..."
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            echo "Deploying Docker Containers..."
             docker compose pull
             docker compose up -d --remove-orphans
 
