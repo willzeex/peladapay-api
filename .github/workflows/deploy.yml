@@ -31,15 +31,17 @@ jobs:
         run: dotnet tool install --global dotnet-ef
 
       - name: Generate migration script
+        env:
+          ConnectionStrings__DefaultConnection: ${{ secrets.DB_CONNECTION_STRING }}
         run: |
           mkdir -p deploy/migrations
-          export PATH="$PATH:/home/runner/.dotnet/tools"
+          export PATH="$PATH:$HOME/.dotnet/tools"
 
           MIGRATION=$(date +%Y%m%d%H%M)
 
           dotnet ef migrations script \
-            --project src/PeladaPay.Infrastructure/PeladaPay.Infrastructure.csproj
-            --startup-project src/PeladaPay.Api/PeladaPay.Api.csproj
+            --project src/PeladaPay.Infrastructure/PeladaPay.Infrastructure.csproj \
+            --startup-project src/PeladaPay.Api/PeladaPay.Api.csproj \
             --idempotent \
             --output deploy/migrations/${MIGRATION}_migration.sql
 
@@ -104,13 +106,13 @@ jobs:
 
             echo "Running database migrations"
 
-            for file in $(ls deploy/migrations/*.sql | sort)
+            find deploy/migrations -name "*.sql" | sort | while read file
             do
               echo "Applying $file"
               docker exec -i peladapay-db psql \
                 -U $POSTGRES_USER \
                 -d $POSTGRES_DB \
-                < $file
+                < "$file"
             done
 
             echo "Pulling latest image"
