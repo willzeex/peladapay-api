@@ -33,7 +33,7 @@ jobs:
       - name: Generate migration script
         run: |
           mkdir -p deploy/migrations
-          export PATH="$PATH:/root/.dotnet/tools"
+          export PATH="$PATH:/home/runner/.dotnet/tools"
 
           MIGRATION=$(date +%Y%m%d%H%M)
 
