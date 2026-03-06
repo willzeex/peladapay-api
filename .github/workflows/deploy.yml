@@ -5,10 +5,8 @@ on:
     branches: [ main ]
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
-
     permissions:
       packages: write
       contents: read
@@ -24,34 +22,37 @@ jobs:
       - name: Restore
         run: dotnet restore
 
-      - name: Build
-        run: dotnet build --configuration Release --no-restore
-
       - name: Install EF CLI
         run: dotnet tool install --global dotnet-ef
 
       - name: Generate migration bundle
         run: |
           export PATH="$PATH:$HOME/.dotnet/tools"
-
           mkdir -p deploy
-
+          
+          # Gerando bundle auto-contido para Linux 64 bits
           dotnet ef migrations bundle \
             --project src/PeladaPay.Infrastructure/PeladaPay.Infrastructure.csproj \
             --startup-project src/PeladaPay.Api/PeladaPay.Api.csproj \
             --configuration Release \
-            --output deploy/migrate
-
-          chmod +x deploy/migrate
+            --runtime linux-x64 \
+            --self-contained \
+            --output deploy/migrate \
+            --force
 
       - name: Login GHCR
-        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Docker image
-        run: docker build -t ghcr.io/${{ github.repository }}:latest .
-
-      - name: Push image
-        run: docker push ghcr.io/${{ github.repository }}:latest
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository }}:latest
 
       - name: Upload migration bundle
         uses: actions/upload-artifact@v4
@@ -59,18 +60,15 @@ jobs:
           name: migration-bundle
           path: deploy/migrate
 
-
   deploy:
     needs: build
     runs-on: ubuntu-latest
-
     steps:
-
       - name: Download migration bundle
         uses: actions/download-artifact@v4
         with:
           name: migration-bundle
-          path: deploy
+          path: tmp-bundle
 
       - name: Copy bundle to server
         uses: appleboy/scp-action@v0.1.7
@@ -78,52 +76,38 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "deploy/migrate"
+          source: "tmp-bundle/migrate"
           target: "~/apps/peladapay-api"
+          strip_components: 1
 
-      - name: Deploy server
+      - name: Execute Remote Deploy
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-
           script: |
-
             set -e
-
             cd ~/apps/peladapay-api
+            
+            # Garante permissão de execução
+            chmod +x ./migrate
 
-            echo "Creating .env"
+            echo "Running database migrations..."
+            # Passando a connection string via argumento (padrão do bundle)
+            ./migrate --connection "Host=localhost;Port=5432;Database=${{ vars.POSTGRES_DB }};Username=${{ vars.POSTGRES_USER }};Password=${{ secrets.POSTGRES_PASSWORD }}"
 
+            echo "Updating Environment File..."
             cat > .env <<EOF
             ASPNETCORE_ENVIRONMENT=${{ vars.ASPNETCORE_ENVIRONMENT }}
-            POSTGRES_DB=${{ vars.POSTGRES_DB }}
-            POSTGRES_USER=${{ vars.POSTGRES_USER }}
-            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=${{ vars.POSTGRES_DB }};Username=${{ vars.POSTGRES_USER }};Password=${{ secrets.POSTGRES_PASSWORD }}
             EOF
 
-            echo "Running database migrations"
+            echo "Deploying Docker Containers..."
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker compose pull
+            docker compose up -d --remove-orphans
 
-            ConnectionStrings__DefaultConnection="Host=localhost;Port=5432;Database=$POSTGRES_DB;Username=$POSTGRES_USER;Password=$POSTGRES_PASSWORD" \
-            ./deploy/migrate
-
-            echo "Pulling latest image"
-
-            docker pull ghcr.io/${{ github.repository }}:latest
-
-            echo "Starting containers"
-
-            docker compose up -d --pull always
-
-            echo "Waiting for API health check"
-
-            sleep 10
-
-            docker inspect \
-              --format='{{json .State.Health.Status}}' \
-              peladapay-api
-
-            echo "Cleaning unused images"
-
-            docker image prune -af
+            echo "Cleaning up..."
+            docker image prune -f
+            rm ./migrate
