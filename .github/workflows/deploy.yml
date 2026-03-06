@@ -21,30 +21,28 @@ jobs:
         with:
           dotnet-version: 9.0.x
 
-      - name: Restore dependencies
+      - name: Restore
         run: dotnet restore
 
-      - name: Build solution
-        run: dotnet build --no-restore
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
 
-      - name: Install dotnet-ef
+      - name: Install EF CLI
         run: dotnet tool install --global dotnet-ef
 
-      - name: Generate migration script
-        env:
-          ConnectionStrings__DefaultConnection: ${{ secrets.DB_CONNECTION_STRING }}
+      - name: Generate migration bundle
         run: |
-          mkdir -p deploy/migrations
           export PATH="$PATH:$HOME/.dotnet/tools"
 
-          MIGRATION=$(date +%Y%m%d%H%M)
+          mkdir -p deploy
 
-          dotnet ef migrations script \
+          dotnet ef migrations bundle \
             --project src/PeladaPay.Infrastructure/PeladaPay.Infrastructure.csproj \
             --startup-project src/PeladaPay.Api/PeladaPay.Api.csproj \
             --configuration Release \
-            --idempotent \
-            --output deploy/migrations/${MIGRATION}_migration.sql
+            --output deploy/migrate
+
+          chmod +x deploy/migrate
 
       - name: Login GHCR
         run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -55,11 +53,11 @@ jobs:
       - name: Push image
         run: docker push ghcr.io/${{ github.repository }}:latest
 
-      - name: Upload migration artifact
+      - name: Upload migration bundle
         uses: actions/upload-artifact@v4
         with:
-          name: migrations
-          path: deploy/migrations
+          name: migration-bundle
+          path: deploy/migrate
 
 
   deploy:
@@ -68,19 +66,19 @@ jobs:
 
     steps:
 
-      - name: Download migrations
+      - name: Download migration bundle
         uses: actions/download-artifact@v4
         with:
-          name: migrations
-          path: deploy/migrations
+          name: migration-bundle
+          path: deploy
 
-      - name: Copy migrations to server
+      - name: Copy bundle to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "deploy/migrations/*"
+          source: "deploy/migrate"
           target: "~/apps/peladapay-api"
 
       - name: Deploy server
@@ -107,14 +105,8 @@ jobs:
 
             echo "Running database migrations"
 
-            find deploy/migrations -name "*.sql" | sort | while read file
-            do
-              echo "Applying $file"
-              docker exec -i peladapay-db psql \
-                -U $POSTGRES_USER \
-                -d $POSTGRES_DB \
-                < "$file"
-            done
+            ConnectionStrings__DefaultConnection="Host=localhost;Port=5432;Database=$POSTGRES_DB;Username=$POSTGRES_USER;Password=$POSTGRES_PASSWORD" \
+            ./deploy/migrate
 
             echo "Pulling latest image"
 
