@@ -20,7 +20,12 @@ jobs:
           dotnet-version: 9.0.x
 
       - name: Restore
-        run: dotnet restore
+        # Adicionamos o -r linux-x64 para preparar os assets do projeto
+        run: dotnet restore -r linux-x64
+
+      - name: Build
+        # O Build também precisa saber do runtime para o bundle
+        run: dotnet build --configuration Release --no-restore -r linux-x64
 
       - name: Install EF CLI
         run: dotnet tool install --global dotnet-ef
@@ -30,7 +35,7 @@ jobs:
           export PATH="$PATH:$HOME/.dotnet/tools"
           mkdir -p deploy
           
-          # Gerando bundle auto-contido para Linux 64 bits
+          # Agora o bundle encontrará os assets para linux-x64
           dotnet ef migrations bundle \
             --project src/PeladaPay.Infrastructure/PeladaPay.Infrastructure.csproj \
             --startup-project src/PeladaPay.Api/PeladaPay.Api.csproj \
@@ -38,7 +43,7 @@ jobs:
             --runtime linux-x64 \
             --self-contained \
             --output deploy/migrate \
-            --force
+            --force --no-build
 
       - name: Login GHCR
         uses: docker/login-action@v3
