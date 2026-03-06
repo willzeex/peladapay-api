@@ -3,6 +3,8 @@
 		<TargetFramework>net9.0</TargetFramework>
 		<AssemblyName>PeladaPay.Infrastructure</AssemblyName>
 		<RootNamespace>PeladaPay.Infrastructure</RootNamespace>
+
+		<RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
