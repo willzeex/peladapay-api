@@ -4,7 +4,6 @@ on:
   push:
     branches: [main]
 
-# Avoid concurrent deployments stepping on each other.
 concurrency:
   group: deploy-production
   cancel-in-progress: false
@@ -20,6 +19,7 @@ jobs:
     name: Build, Bundle Migrations, and Push Image
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
     permissions:
       contents: read
       packages: write
@@ -33,29 +33,20 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Install dotnet-ef and export PATH
+      - name: Install dotnet-ef
         run: |
           dotnet tool install --global dotnet-ef
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
-      # Restore/build explicit projects to avoid EF metadata resolution issues in CI.
-      - name: Restore API and Infrastructure projects
-        run: |
-          dotnet restore src/PeladaPay.Api/PeladaPay.Api.csproj -r ${{ env.RUNTIME }}
-          dotnet restore src/PeladaPay.Infrastructure/PeladaPay.Infrastructure.csproj -r ${{ env.RUNTIME }}
+      # Restore entire solution (best practice)
+      - name: Restore solution
+        run: dotnet restore
 
-      - name: Build API startup project (Release)
+      # Build entire solution
+      - name: Build solution
         run: |
-          dotnet build src/PeladaPay.Api/PeladaPay.Api.csproj \
+          dotnet build \
             --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --runtime ${{ env.RUNTIME }} \
-            --no-restore
-
-      - name: Build Infrastructure project (Release)
-        run: |
-          dotnet build src/PeladaPay.Infrastructure/PeladaPay.Infrastructure.csproj \
-            --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --runtime ${{ env.RUNTIME }} \
             --no-restore
 
       - name: Generate EF Core migration bundle
@@ -69,8 +60,7 @@ jobs:
             --runtime ${{ env.RUNTIME }} \
             --self-contained \
             --output deploy/migrate \
-            --force \
-            --no-build
+            --force
 
           chmod +x deploy/migrate
 
@@ -100,6 +90,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
     permissions:
       contents: read
       packages: read
@@ -135,7 +126,6 @@ jobs:
             APP_DIR="$HOME/apps/peladapay-api"
             cd "$APP_DIR"
 
-            # Build runtime .env used by docker compose (API points to DB container hostname).
             cat > .env <<EOF
             ASPNETCORE_ENVIRONMENT=${{ vars.ASPNETCORE_ENVIRONMENT }}
             POSTGRES_DB=${{ vars.POSTGRES_DB }}
@@ -146,38 +136,37 @@ jobs:
 
             chmod +x ./migrate
 
-            # Ensure DB container is up before applying migrations.
+            echo "Starting database container..."
             docker compose up -d peladapay-db
 
-            echo "Running EF Core migration bundle..."
+            echo "Running EF Core migrations..."
             ./migrate --connection "Host=localhost;Port=5432;Database=${{ vars.POSTGRES_DB }};Username=${{ vars.POSTGRES_USER }};Password=${{ secrets.POSTGRES_PASSWORD }}"
 
-            echo "Logging in to GHCR..."
+            echo "Login to GHCR..."
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-            echo "Updating application containers..."
+            echo "Updating containers..."
             docker compose up -d --pull always
 
-            echo "Checking health/status for container: peladapay-api"
-            # Wait up to 2 minutes for healthy/running state (supports images without healthcheck).
+            echo "Checking container health..."
             for i in $(seq 1 24); do
               status=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' peladapay-api 2>/dev/null || true)
+
               if [ "$status" = "healthy" ] || [ "$status" = "running" ]; then
                 echo "Container peladapay-api is $status"
                 break
               fi
 
               if [ "$i" -eq 24 ]; then
-                echo "ERROR: peladapay-api failed health/status check (last status: ${status:-unknown})"
+                echo "ERROR: peladapay-api failed health check"
                 docker logs --tail=200 peladapay-api || true
                 exit 1
               fi
 
-              echo "Current status: ${status:-unknown}. Waiting..."
               sleep 5
             done
 
-            echo "Cleaning unused Docker images..."
+            echo "Cleaning unused images..."
             docker image prune -af
 
             rm -f ./migrate
