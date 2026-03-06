@@ -2,80 +2,116 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+
+# Avoid concurrent deployments stepping on each other.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  DOTNET_VERSION: 9.0.x
+  BUILD_CONFIGURATION: Release
+  RUNTIME: linux-x64
+  IMAGE_NAME: ghcr.io/${{ github.repository }}:latest
 
 jobs:
   build:
+    name: Build, Bundle Migrations, and Push Image
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
-      packages: write
       contents: read
+      packages: write
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Setup .NET
+      - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 9.0.x
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Restore
-        # Restauramos focando no projeto da API para evitar erro de .sln com runtime
-        run: dotnet restore src/PeladaPay.Api/PeladaPay.Api.csproj -r linux-x64
-
-      - name: Build
-        # Compilamos o projeto da API com o runtime correto para o bundle
-        run: dotnet build src/PeladaPay.Api/PeladaPay.Api.csproj --configuration Release --no-restore -r linux-x64
-
-      - name: Install EF CLI
-        run: dotnet tool install --global dotnet-ef
-
-      - name: Generate migration bundle
+      - name: Install dotnet-ef and export PATH
         run: |
-          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet tool install --global dotnet-ef
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      # Restore/build explicit projects to avoid EF metadata resolution issues in CI.
+      - name: Restore API and Infrastructure projects
+        run: |
+          dotnet restore src/PeladaPay.Api/PeladaPay.Api.csproj -r ${{ env.RUNTIME }}
+          dotnet restore src/PeladaPay.Infrastructure/PeladaPay.Infrastructure.csproj -r ${{ env.RUNTIME }}
+
+      - name: Build API startup project (Release)
+        run: |
+          dotnet build src/PeladaPay.Api/PeladaPay.Api.csproj \
+            --configuration ${{ env.BUILD_CONFIGURATION }} \
+            --runtime ${{ env.RUNTIME }} \
+            --no-restore
+
+      - name: Build Infrastructure project (Release)
+        run: |
+          dotnet build src/PeladaPay.Infrastructure/PeladaPay.Infrastructure.csproj \
+            --configuration ${{ env.BUILD_CONFIGURATION }} \
+            --runtime ${{ env.RUNTIME }} \
+            --no-restore
+
+      - name: Generate EF Core migration bundle
+        run: |
           mkdir -p deploy
-          
-          # Gera o bundle nativo para o Linux da Oracle Cloud
+
           dotnet ef migrations bundle \
             --project src/PeladaPay.Infrastructure/PeladaPay.Infrastructure.csproj \
             --startup-project src/PeladaPay.Api/PeladaPay.Api.csproj \
-            --configuration Release \
-            --runtime linux-x64 \
+            --configuration ${{ env.BUILD_CONFIGURATION }} \
+            --runtime ${{ env.RUNTIME }} \
             --self-contained \
             --output deploy/migrate \
-            --force --no-build
+            --force \
+            --no-build
 
-      - name: Login GHCR
+          chmod +x deploy/migrate
+
+      - name: Upload migration bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-bundle
+          path: deploy/migrate
+          if-no-files-found: error
+
+      - name: Login to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Push Docker image
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.repository }}:latest
-
-      - name: Upload migration bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: migration-bundle
-          path: deploy/migrate
+          tags: ${{ env.IMAGE_NAME }}
 
   deploy:
+    name: Deploy to Linux host via SSH
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+
     steps:
-      - name: Download migration bundle
+      - name: Download migration bundle artifact
         uses: actions/download-artifact@v4
         with:
           name: migration-bundle
           path: tmp-bundle
 
-      - name: Copy bundle to server
+      - name: Copy migration bundle to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -85,36 +121,63 @@ jobs:
           target: "~/apps/peladapay-api"
           strip_components: 1
 
-      - name: Execute Remote Deploy
-        uses: appleboy/ssh-action@v1
+      - name: Execute remote deployment
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
+          script_stop: true
+          command_timeout: 30m
           script: |
-            set -e
-            cd ~/apps/peladapay-api
-            
-            # Dá permissão de execução ao binário de migração
-            chmod +x ./migrate
+            set -Eeuo pipefail
 
-            echo "Running database migrations..."
-            # Executa a migração usando a connection string do segredo do GitHub
-            ./migrate --connection "Host=localhost;Port=5432;Database=${{ vars.POSTGRES_DB }};Username=${{ vars.POSTGRES_USER }};Password=${{ secrets.POSTGRES_PASSWORD }}"
+            APP_DIR="$HOME/apps/peladapay-api"
+            cd "$APP_DIR"
 
-            echo "Updating Environment File..."
+            # Build runtime .env used by docker compose (API points to DB container hostname).
             cat > .env <<EOF
             ASPNETCORE_ENVIRONMENT=${{ vars.ASPNETCORE_ENVIRONMENT }}
-            ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=${{ vars.POSTGRES_DB }};Username=${{ vars.POSTGRES_USER }};Password=${{ secrets.POSTGRES_PASSWORD }}
+            POSTGRES_DB=${{ vars.POSTGRES_DB }}
+            POSTGRES_USER=${{ vars.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            ConnectionStrings__DefaultConnection=Host=peladapay-db;Port=5432;Database=${{ vars.POSTGRES_DB }};Username=${{ vars.POSTGRES_USER }};Password=${{ secrets.POSTGRES_PASSWORD }}
             EOF
 
-            echo "Logging into GHCR..."
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            chmod +x ./migrate
 
-            echo "Deploying Docker Containers..."
-            docker compose pull
-            docker compose up -d --remove-orphans
+            # Ensure DB container is up before applying migrations.
+            docker compose up -d peladapay-db
 
-            echo "Cleaning up..."
-            docker image prune -f
-            rm ./migrate
+            echo "Running EF Core migration bundle..."
+            ./migrate --connection "Host=localhost;Port=5432;Database=${{ vars.POSTGRES_DB }};Username=${{ vars.POSTGRES_USER }};Password=${{ secrets.POSTGRES_PASSWORD }}"
+
+            echo "Logging in to GHCR..."
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+            echo "Updating application containers..."
+            docker compose up -d --pull always
+
+            echo "Checking health/status for container: peladapay-api"
+            # Wait up to 2 minutes for healthy/running state (supports images without healthcheck).
+            for i in $(seq 1 24); do
+              status=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' peladapay-api 2>/dev/null || true)
+              if [ "$status" = "healthy" ] || [ "$status" = "running" ]; then
+                echo "Container peladapay-api is $status"
+                break
+              fi
+
+              if [ "$i" -eq 24 ]; then
+                echo "ERROR: peladapay-api failed health/status check (last status: ${status:-unknown})"
+                docker logs --tail=200 peladapay-api || true
+                exit 1
+              fi
+
+              echo "Current status: ${status:-unknown}. Waiting..."
+              sleep 5
+            done
+
+            echo "Cleaning unused Docker images..."
+            docker image prune -af
+
+            rm -f ./migrate
