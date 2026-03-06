@@ -11,12 +11,12 @@ concurrency:
 env:
   DOTNET_VERSION: 9.0.x
   BUILD_CONFIGURATION: Release
-  RUNTIME: linux-x64
   IMAGE_NAME: ghcr.io/${{ github.repository }}:latest
 
 jobs:
+
   build:
-    name: Build, Bundle Migrations, and Push Image
+    name: Build and Push Image
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -25,53 +25,19 @@ jobs:
       packages: write
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET SDK
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Install dotnet-ef
-        run: |
-          dotnet tool install --global dotnet-ef
-          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
-
-      # Restore entire solution (best practice)
-      - name: Restore solution
+      - name: Restore
         run: dotnet restore
 
-      # Build entire solution
-      - name: Build solution
-        run: |
-          dotnet build \
-            --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --no-restore
-      - name: Generate EF Core migration bundle
-        env:
-            ASPNETCORE_ENVIRONMENT: Development
-        run: |
-            mkdir -p deploy
-
-            dotnet ef migrations bundle \
-                --project src/PeladaPay.Infrastructure/PeladaPay.Infrastructure.csproj \
-                --startup-project src/PeladaPay.Api/PeladaPay.Api.csproj \
-                --configuration ${{ env.BUILD_CONFIGURATION }} \
-                --runtime ${{ env.RUNTIME }} \
-                --self-contained \
-                --output deploy/migrate \
-                --force \
-                --no-build
-
-            chmod +x deploy/migrate
-
-      - name: Upload migration bundle artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: migration-bundle
-          path: deploy/migrate
-          if-no-files-found: error
+      - name: Build
+        run: dotnet build --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -88,45 +54,26 @@ jobs:
           tags: ${{ env.IMAGE_NAME }}
 
   deploy:
-    name: Deploy to Linux host via SSH
+    name: Deploy to Linux server
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    permissions:
-      contents: read
-      packages: read
 
     steps:
-      - name: Download migration bundle artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: migration-bundle
-          path: tmp-bundle
-
-      - name: Copy migration bundle to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "tmp-bundle/migrate"
-          target: "~/apps/peladapay-api"
-          strip_components: 1
-
-      - name: Execute remote deployment
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script_stop: true
-          command_timeout: 30m
           script: |
             set -Eeuo pipefail
 
             APP_DIR="$HOME/apps/peladapay-api"
+            mkdir -p "$APP_DIR"
             cd "$APP_DIR"
+
+            echo "Creating .env file..."
 
             cat > .env <<EOF
             ASPNETCORE_ENVIRONMENT=${{ vars.ASPNETCORE_ENVIRONMENT }}
@@ -136,39 +83,33 @@ jobs:
             ConnectionStrings__DefaultConnection=Host=peladapay-db;Port=5432;Database=${{ vars.POSTGRES_DB }};Username=${{ vars.POSTGRES_USER }};Password=${{ secrets.POSTGRES_PASSWORD }}
             EOF
 
-            chmod +x ./migrate
-
-            echo "Starting database container..."
-            docker compose up -d peladapay-db
-
-            echo "Running EF Core migrations..."
-            ./migrate --connection "Host=localhost;Port=5432;Database=${{ vars.POSTGRES_DB }};Username=${{ vars.POSTGRES_USER }};Password=${{ secrets.POSTGRES_PASSWORD }}"
-
             echo "Login to GHCR..."
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-            echo "Updating containers..."
-            docker compose up -d --pull always
+            echo "Pulling new image..."
+            docker compose pull
 
-            echo "Checking container health..."
-            for i in $(seq 1 24); do
-              status=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' peladapay-api 2>/dev/null || true)
+            echo "Restarting containers..."
+            docker compose up -d
 
-              if [ "$status" = "healthy" ] || [ "$status" = "running" ]; then
-                echo "Container peladapay-api is $status"
+            echo "Waiting container to start..."
+
+            for i in $(seq 1 30); do
+              status=$(docker inspect --format='{{.State.Status}}' peladapay-api 2>/dev/null || true)
+
+              if [ "$status" = "running" ]; then
+                echo "Container running"
                 break
               fi
 
-              if [ "$i" -eq 24 ]; then
-                echo "ERROR: peladapay-api failed health check"
-                docker logs --tail=200 peladapay-api || true
+              if [ "$i" -eq 30 ]; then
+                echo "Container failed to start"
+                docker logs peladapay-api
                 exit 1
               fi
 
               sleep 5
             done
 
-            echo "Cleaning unused images..."
+            echo "Cleaning old images..."
             docker image prune -af
-
-            rm -f ./migrate

@@ -5,6 +5,7 @@ using PeladaPay.API.Services;
 using PeladaPay.Application.Common;
 using PeladaPay.Application.Interfaces;
 using PeladaPay.Infrastructure.DependencyInjection;
+using PeladaPay.Infrastructure.Extensions;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -60,5 +61,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.UseHangfireDashboard("/hangfire");
+
+await app.ApplyMigrationsAsync();
 
 app.Run();
