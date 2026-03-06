@@ -48,21 +48,23 @@ jobs:
           dotnet build \
             --configuration ${{ env.BUILD_CONFIGURATION }} \
             --no-restore
-
       - name: Generate EF Core migration bundle
+        env:
+            ASPNETCORE_ENVIRONMENT: Development
         run: |
-          mkdir -p deploy
+            mkdir -p deploy
 
-          dotnet ef migrations bundle \
-            --project src/PeladaPay.Infrastructure/PeladaPay.Infrastructure.csproj \
-            --startup-project src/PeladaPay.Api/PeladaPay.Api.csproj \
-            --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --runtime ${{ env.RUNTIME }} \
-            --self-contained \
-            --output deploy/migrate \
-            --force
+            dotnet ef migrations bundle \
+                --project src/PeladaPay.Infrastructure/PeladaPay.Infrastructure.csproj \
+                --startup-project src/PeladaPay.Api/PeladaPay.Api.csproj \
+                --configuration ${{ env.BUILD_CONFIGURATION }} \
+                --runtime ${{ env.RUNTIME }} \
+                --self-contained \
+                --output deploy/migrate \
+                --force \
+                --no-build
 
-          chmod +x deploy/migrate
+            chmod +x deploy/migrate
 
       - name: Upload migration bundle artifact
         uses: actions/upload-artifact@v4
