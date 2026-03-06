@@ -4,7 +4,6 @@ using PeladaPay.API.Middlewares;
 using PeladaPay.API.Services;
 using PeladaPay.Application.Common;
 using PeladaPay.Application.Interfaces;
-using PeladaPay.Infrastructure.Data;
 using PeladaPay.Infrastructure.DependencyInjection;
 using System.Text.Json.Serialization;
 
@@ -61,13 +60,5 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.UseHangfireDashboard("/hangfire");
-
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    var userManager = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<PeladaPay.Domain.Entities.ApplicationUser>>();
-    var roleManager = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.RoleManager<Microsoft.AspNetCore.Identity.IdentityRole>>();
-    await SeedData.EnsureSeedDataAsync(dbContext, userManager, roleManager);
-}
 
 app.Run();

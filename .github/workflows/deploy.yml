@@ -5,29 +5,75 @@ on:
     branches: [ main ]
 
 jobs:
+
   build:
     runs-on: ubuntu-latest
+
     permissions:
       packages: write
       contents: read
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Install dotnet-ef
+        run: dotnet tool install --global dotnet-ef
+
+      - name: Generate migration script
+        run: |
+          mkdir -p deploy/migrations
+          export PATH="$PATH:/root/.dotnet/tools"
+
+          MIGRATION=$(date +%Y%m%d%H%M)
+
+          dotnet ef migrations script \
+            --project src/PeladaPay.Infrastructure \
+            --startup-project src/PeladaPay.Api \
+            --idempotent \
+            --output deploy/migrations/${MIGRATION}_migration.sql
+
       - name: Login GHCR
         run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Build Docker image
-        run: |
-          docker build -t ghcr.io/${{ github.repository }}:latest .
+        run: docker build -t ghcr.io/${{ github.repository }}:latest .
 
       - name: Push image
-        run: |
-          docker push ghcr.io/${{ github.repository }}:latest
+        run: docker push ghcr.io/${{ github.repository }}:latest
+
+      - name: Upload migration artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: migrations
+          path: deploy/migrations
+
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
+
     steps:
+
+      - name: Download migrations
+        uses: actions/download-artifact@v4
+        with:
+          name: migrations
+          path: deploy/migrations
+
+      - name: Copy migrations to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "deploy/migrations/*"
+          target: "~/apps/peladapay-api"
+
       - name: Deploy server
         uses: appleboy/ssh-action@v1
         with:
@@ -37,10 +83,46 @@ jobs:
 
           script: |
 
+            set -e
+
             cd ~/apps/peladapay-api
 
-            echo "Pulling new image"
-            docker pull ghcr.io/willzeex/peladapay-api:latest
+            echo "Creating .env"
 
-            echo "Restarting containers"
-            docker compose up -d
+            cat > .env <<EOF
+            ASPNETCORE_ENVIRONMENT=${{ vars.ASPNETCORE_ENVIRONMENT }}
+            POSTGRES_DB=${{ vars.POSTGRES_DB }}
+            POSTGRES_USER=${{ vars.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            EOF
+
+            echo "Running database migrations"
+
+            for file in $(ls deploy/migrations/*.sql | sort)
+            do
+              echo "Applying $file"
+              docker exec -i peladapay-db psql \
+                -U $POSTGRES_USER \
+                -d $POSTGRES_DB \
+                < $file
+            done
+
+            echo "Pulling latest image"
+
+            docker pull ghcr.io/${{ github.repository }}:latest
+
+            echo "Starting containers"
+
+            docker compose up -d --pull always
+
+            echo "Waiting for API health check"
+
+            sleep 10
+
+            docker inspect \
+              --format='{{json .State.Health.Status}}' \
+              peladapay-api
+
+            echo "Cleaning unused images"
+
+            docker image prune -af

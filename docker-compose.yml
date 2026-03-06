@@ -1,18 +1,16 @@
 version: "3.9"
 
 services:
-
   api:
     image: ghcr.io/willzeex/peladapay-api:latest
     container_name: peladapay-api
     restart: always
-
     ports:
       - "8080:8080"
-
     env_file:
       - .env
-
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
@@ -23,12 +21,10 @@ services:
     image: postgres:16
     container_name: peladapay-db
     restart: always
-
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
