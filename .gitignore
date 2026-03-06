@@ -31,3 +31,4 @@ coverage/
 # NuGet
 *.nupkg
 packages/
+/src/PeladaPay.API/appsettings.Local.json
