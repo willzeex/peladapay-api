@@ -2,28 +2,43 @@ services:
   api:
     build: .
     container_name: peladapay-api
-    ports:
-      - "8080:8080"
+    restart: unless-stopped
+
     depends_on:
       - postgres
+
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=peladapaydb;Username=postgres;Password=postgres
-      Jwt__Issuer: PeladaPay
-      Jwt__Audience: PeladaPayClients
-      Jwt__Key: peladapay-super-secret-key-123456
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__Key: ${JWT_KEY}
+
+    networks:
+      - internal
+      - traefik-network
 
   postgres:
     image: postgres:16-alpine
     container_name: peladapay-postgres
-    ports:
-      - "5432:5432"
+    restart: unless-stopped
+
     environment:
-      POSTGRES_DB: peladapaydb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+    networks:
+      - internal
+
 volumes:
   pgdata:
+
+networks:
+  internal:
+
+  traefik-network:
+    external: true
