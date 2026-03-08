@@ -1,22 +1,32 @@
-version: "3.9"
-
 services:
   api:
     image: ghcr.io/willzeex/peladapay-api:latest
     container_name: peladapay-api
     restart: always
+
     env_file:
       - .env
+
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+      ASPNETCORE_URLS: http://+:8080
+
     networks:
       - traefik-network
       - internal
+
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.peladapay.rule=PathPrefix(`/`)"
-      - "traefik.http.routers.peladapay.entrypoints=web"
-      - "traefik.http.services.peladapay.loadbalancer.server.port=8080"
+
+      # router
+      - "traefik.http.routers.peladapay-api.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.peladapay-api.entrypoints=web"
+
+      # service
+      - "traefik.http.services.peladapay-api.loadbalancer.server.port=8080"
+
+      # importante quando existem múltiplas redes
+      - "traefik.docker.network=traefik-network"
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
@@ -25,15 +35,18 @@ services:
       retries: 3
 
   postgres:
-    image: postgres:16
+    image: postgres:16-alpine
     container_name: peladapay-db
     restart: always
+
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
     networks:
       - internal
 
