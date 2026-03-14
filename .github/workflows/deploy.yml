@@ -1,43 +1,26 @@
-name: Build and Deploy
+name: CI-CD API
 
 on:
   push:
-    branches: [main]
-
-concurrency:
-  group: deploy-production
-  cancel-in-progress: false
+    branches:
+      - main
 
 env:
-  DOTNET_VERSION: 9.0.x
-  BUILD_CONFIGURATION: Release
-  IMAGE_NAME: ghcr.io/${{ github.repository }}:latest
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/peladapay-api
 
 jobs:
 
-  build:
-    name: Build and Push Image
+  build-and-push:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
 
     permissions:
       contents: read
       packages: write
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Restore
-        run: dotnet restore
-
-      - name: Build
-        run: dotnet build --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -46,70 +29,52 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ env.IMAGE_NAME }}
+      - name: Build image
+        run: |
+          docker build -t $IMAGE_NAME:latest -f Dockerfile .
+
+      - name: Push image
+        run: |
+          docker push $IMAGE_NAME:latest
 
   deploy:
-    name: Deploy to Linux server
-    needs: build
     runs-on: ubuntu-latest
+    needs: build-and-push
 
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script_stop: true
-          script: |
-            set -Eeuo pipefail
 
-            APP_DIR="$HOME/apps/peladapay-api"
-            mkdir -p "$APP_DIR"
-            cd "$APP_DIR"
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-            echo "Creating .env file..."
+      - name: Deploy
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << EOF
 
-            cat > .env <<EOF
-            ASPNETCORE_ENVIRONMENT=${{ vars.ASPNETCORE_ENVIRONMENT }}
-            POSTGRES_DB=${{ vars.POSTGRES_DB }}
-            POSTGRES_USER=${{ vars.POSTGRES_USER }}
-            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-            ConnectionStrings__DefaultConnection=Host=peladapay-db;Port=5432;Database=${{ vars.POSTGRES_DB }};Username=${{ vars.POSTGRES_USER }};Password=${{ secrets.POSTGRES_PASSWORD }}
-            EOF
+          echo "Updating .env"
 
-            echo "Login to GHCR..."
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          cat > ~/apps/peladapay/api/.env << EOL
+          ASPNETCORE_ENVIRONMENT=Production
+          ConnectionStrings__DefaultConnection=${{ secrets.DB_CONNECTION_STRING }}
+          Jwt__Key=${{ secrets.JWT_KEY }}
+          EOL
 
-            echo "Pulling new image..."
-            docker compose pull
+          echo "Login GHCR"
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            echo "Restarting containers..."
-            docker compose up -d
+          echo "Pull new images"
+          cd ~/apps/peladapay/api
+          docker compose pull
 
-            echo "Waiting container to start..."
+          echo "Restart services"
+          docker compose up -d
 
-            for i in $(seq 1 30); do
-              status=$(docker inspect --format='{{.State.Status}}' peladapay-api 2>/dev/null || true)
+          echo "Prune old images"
+          docker image prune -f
 
-              if [ "$status" = "running" ]; then
-                echo "Container running"
-                break
-              fi
+          echo "Deploy finished"
 
-              if [ "$i" -eq 30 ]; then
-                echo "Container failed to start"
-                docker logs peladapay-api
-                exit 1
-              fi
-
-              sleep 5
-            done
-
-            echo "Cleaning old images..."
-            docker image prune -af
+          EOF

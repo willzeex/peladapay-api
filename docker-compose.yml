@@ -1,59 +1,37 @@
 services:
-  api:
+  plynt-api:
     image: ghcr.io/willzeex/peladapay-api:latest
-    container_name: peladapay-api
-    restart: always
+
+    restart: unless-stopped
 
     env_file:
       - .env
 
     environment:
-      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
-      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_URLS: http://+:5000
 
     networks:
-      - traefik-network
-      - internal
-
-    labels:
-      - "traefik.enable=true"
-
-      # router
-      - "traefik.http.routers.peladapay-api.rule=PathPrefix(`/`)"
-      - "traefik.http.routers.peladapay-api.entrypoints=web"
-
-      # service
-      - "traefik.http.services.peladapay-api.loadbalancer.server.port=8080"
-
-      # importante quando existem múltiplas redes
-      - "traefik.docker.network=traefik-network"
+      - traefik
 
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-  postgres:
-    image: postgres:16-alpine
-    container_name: peladapay-db
-    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-    networks:
-      - internal
-
-volumes:
-  postgres_data:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.peladapay-api.rule=Host(`api.peladapay.duckdns.org`)"
+      - "traefik.http.routers.peladapay-api.entrypoints=websecure"
+      - "traefik.http.routers.peladapay-api.tls.certresolver=myresolver"
+      - "traefik.http.services.peladapay-api.loadbalancer.server.port=5000"
 
 networks:
-  internal:
-  traefik-network:
+  traefik:
     external: true
