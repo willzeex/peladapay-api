@@ -51,6 +51,7 @@ public class CompleteOnboardingGroupCommandValidator : AbstractValidator<Complet
         RuleFor(x => x.Frequency).NotEmpty().Must(f => ValidFrequencies.Contains(f));
         RuleFor(x => x.Venue).MaximumLength(120);
         RuleFor(x => x.CrestUrl).MaximumLength(500);
+        RuleFor(x => x.PlanId).NotEqual(Guid.Empty);
     }
 }
 
@@ -107,5 +108,8 @@ public class UpdateUserOnboardingSettingsCommandValidator : AbstractValidator<Up
             .When(x => x.OnboardingFrequency is not null);
         RuleFor(x => x.OnboardingVenue).MaximumLength(120).When(x => x.OnboardingVenue is not null);
         RuleFor(x => x.OnboardingCrestUrl).MaximumLength(500).When(x => x.OnboardingCrestUrl is not null);
+        RuleFor(x => x.PlanId)
+            .Must(planId => !planId.HasValue || planId.Value != Guid.Empty)
+            .WithMessage("PlanId inválido.");
     }
 }

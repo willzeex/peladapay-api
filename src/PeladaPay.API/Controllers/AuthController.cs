@@ -56,7 +56,7 @@ public class AuthController(IMediator mediator) : ControllerBase
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CompleteOnboardingGroup(Guid sessionId, [FromBody] CompleteOnboardingGroupRequest request, CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new CompleteOnboardingGroupCommand(sessionId, request.GroupName, request.Frequency, request.Venue, request.CrestUrl), cancellationToken);
+        var result = await mediator.Send(new CompleteOnboardingGroupCommand(sessionId, request.GroupName, request.Frequency, request.Venue, request.CrestUrl, request.PlanId), cancellationToken);
         return StatusCode(StatusCodes.Status200OK, new ApiResponse<OnboardingStepResponseDto>(
             StatusCodes.Status200OK,
             "Etapa de pelada concluída com sucesso.",
@@ -91,5 +91,5 @@ public class AuthController(IMediator mediator) : ControllerBase
 }
 
 public sealed record CompleteOnboardingComplianceRequest(string Cpf, DateOnly BirthDate, string Address);
-public sealed record CompleteOnboardingGroupRequest(string GroupName, string Frequency, string? Venue, string? CrestUrl);
+public sealed record CompleteOnboardingGroupRequest(string GroupName, string Frequency, string? Venue, string? CrestUrl, Guid PlanId);
 public sealed record CompleteOnboardingFinancialRequest(decimal MonthlyFee, decimal SingleMatchFee, int DueDay, bool IsExpenseManagementOnly);
