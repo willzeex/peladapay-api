@@ -17,8 +17,11 @@ Content-Type: application/json
 
 {
   "fullName": "João da Silva",
-  "email": "joao@peladapay.com",
+  "cpf": "12345678910",
   "whatsapp": "11999999999",
+  "phone": "1133334444",
+  "cellphone": "11999999999",
+  "email": "joao@peladapay.com",
   "password": "Pelada123!"
 }
 
@@ -27,7 +30,6 @@ PUT {{host}}/api/auth/onboarding/{{sessionId}}/compliance
 Content-Type: application/json
 
 {
-  "cpf": "123.456.789-10",
   "birthDate": "1990-05-10",
   "address": "Rua Exemplo, 123, Centro - SP"
 }
@@ -38,7 +40,7 @@ Content-Type: application/json
 
 {
   "groupName": "Pelada de Terça",
-  "frequency": "Semanal",
+  "frequency": "semanal",
   "venue": "Bairro",
   "crestUrl": null
 }
