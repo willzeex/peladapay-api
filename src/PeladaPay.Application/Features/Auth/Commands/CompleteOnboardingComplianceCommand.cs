@@ -7,7 +7,6 @@ namespace PeladaPay.Application.Features.Auth.Commands;
 
 public sealed record CompleteOnboardingComplianceCommand(
     Guid SessionId,
-    string Cpf,
     DateOnly BirthDate,
     string Address) : IRequest<OnboardingStepResponseDto>;
 
@@ -24,7 +23,6 @@ public sealed class CompleteOnboardingComplianceCommandHandler(
             throw new InvalidOperationException("Essa sessão de onboarding já foi finalizada.");
         }
 
-        user.Cpf = request.Cpf.Trim();
         user.BirthDate = request.BirthDate;
         user.Address = request.Address.Trim();
         user.OnboardingCurrentStep = Math.Max(user.OnboardingCurrentStep, 2);
