@@ -11,7 +11,8 @@ public sealed record GetUserOnboardingSettingsResponse(
     string OnboardingGroupName,
     string OnboardingFrequency,
     string OnboardingVenue,
-    string OnboardingCrestUrl);
+    string OnboardingCrestUrl,
+    Guid? PlanId);
 
 public sealed class GetUserOnboardingSettingsQueryHandler(
     UserManager<ApplicationUser> userManager,
@@ -27,6 +28,7 @@ public sealed class GetUserOnboardingSettingsQueryHandler(
             user.OnboardingGroupName ?? string.Empty,
             user.OnboardingFrequency ?? string.Empty,
             user.OnboardingVenue ?? string.Empty,
-            user.OnboardingCrestUrl ?? string.Empty);
+            user.OnboardingCrestUrl ?? string.Empty,
+            user.PlanId);
     }
 }

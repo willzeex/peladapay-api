@@ -2,6 +2,8 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using PeladaPay.Application.Interfaces;
 using PeladaPay.Domain.Entities;
+using PeladaPay.Domain.Exceptions;
+using PeladaPay.Domain.Interfaces;
 
 namespace PeladaPay.Application.Features.Users.Commands;
 
@@ -9,16 +11,19 @@ public sealed record UpdateUserOnboardingSettingsCommand(
     string? OnboardingGroupName,
     string? OnboardingFrequency,
     string? OnboardingVenue,
-    string? OnboardingCrestUrl) : IRequest<UpdateUserOnboardingSettingsResponse>;
+    string? OnboardingCrestUrl,
+    Guid? PlanId) : IRequest<UpdateUserOnboardingSettingsResponse>;
 
 public sealed record UpdateUserOnboardingSettingsResponse(
     string? OnboardingGroupName,
     string? OnboardingFrequency,
     string? OnboardingVenue,
-    string? OnboardingCrestUrl);
+    string? OnboardingCrestUrl,
+    Guid? PlanId);
 
 public sealed class UpdateUserOnboardingSettingsCommandHandler(
     UserManager<ApplicationUser> userManager,
+    IRepository<Plan> planRepository,
     ICurrentUserService currentUserService) : IRequestHandler<UpdateUserOnboardingSettingsCommand, UpdateUserOnboardingSettingsResponse>
 {
     public async Task<UpdateUserOnboardingSettingsResponse> Handle(UpdateUserOnboardingSettingsCommand request, CancellationToken cancellationToken)
@@ -61,6 +66,14 @@ public sealed class UpdateUserOnboardingSettingsCommandHandler(
             hasChanges = true;
         }
 
+        if (request.PlanId.HasValue)
+        {
+            var plan = await planRepository.GetByIdAsync(request.PlanId.Value, cancellationToken)
+                ?? throw new NotFoundException("Plano informado não encontrado.");
+            user.PlanId = plan.Id;
+            hasChanges = true;
+        }
+
         if (hasChanges)
         {
             var updateResult = await userManager.UpdateAsync(user);
@@ -75,6 +88,7 @@ public sealed class UpdateUserOnboardingSettingsCommandHandler(
             user.OnboardingGroupName,
             user.OnboardingFrequency,
             user.OnboardingVenue,
-            user.OnboardingCrestUrl);
+            user.OnboardingCrestUrl,
+            user.PlanId);
     }
 }

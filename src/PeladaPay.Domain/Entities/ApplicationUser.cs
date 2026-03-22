@@ -16,6 +16,8 @@ public class ApplicationUser : IdentityUser
     public string? OnboardingCrestUrl { get; set; }
     public int OnboardingCurrentStep { get; set; }
     public DateTime? OnboardingCompletedAtUtc { get; set; }
+    public Guid? PlanId { get; set; }
+    public Plan? Plan { get; set; }
 
     public ICollection<Group> OrganizedGroups { get; set; } = new List<Group>();
 }
