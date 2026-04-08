@@ -10,7 +10,14 @@ public class RegisterManagerCommandValidator : AbstractValidator<RegisterManager
     public RegisterManagerCommandValidator()
     {
         RuleFor(x => x.FullName).NotEmpty().MaximumLength(120);
-        RuleFor(x => x.Email).NotEmpty().EmailAddress();
+        RuleFor(x => x.Cpf)
+            .NotEmpty()
+            .Length(11, 14)
+            .Matches("^[0-9.-]+$");
+        RuleFor(x => x.Whatsapp).NotEmpty().MaximumLength(20);
+        RuleFor(x => x.Phone).NotEmpty().MaximumLength(20);
+        RuleFor(x => x.Cellphone).NotEmpty().MaximumLength(20);
+        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(120);
         RuleFor(x => x.Password).NotEmpty().MinimumLength(6);
     }
 }

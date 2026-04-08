@@ -6,7 +6,14 @@ using PeladaPay.Domain.Entities;
 
 namespace PeladaPay.Application.Features.Auth.Commands;
 
-public sealed record RegisterManagerCommand(string FullName, string Email, string Password) : IRequest<AuthResponseDto>;
+public sealed record RegisterManagerCommand(
+    string FullName,
+    string Cpf,
+    string Whatsapp,
+    string Phone,
+    string Cellphone,
+    string Email,
+    string Password) : IRequest<AuthResponseDto>;
 
 public sealed class RegisterManagerCommandHandler(
     UserManager<ApplicationUser> userManager,
@@ -17,11 +24,21 @@ public sealed class RegisterManagerCommandHandler(
 
     public async Task<AuthResponseDto> Handle(RegisterManagerCommand request, CancellationToken cancellationToken)
     {
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        var normalizedWhatsapp = request.Whatsapp.Trim();
+        var normalizedPhone = request.Phone.Trim();
+        var normalizedCellphone = request.Cellphone.Trim();
+
         var user = new ApplicationUser
         {
-            UserName = request.Email,
-            Email = request.Email,
-            FullName = request.FullName
+            UserName = normalizedEmail,
+            Email = normalizedEmail,
+            FullName = request.FullName.Trim(),
+            Cpf = request.Cpf.Trim(),
+            Whatsapp = normalizedWhatsapp,
+            PhoneNumber = string.IsNullOrWhiteSpace(normalizedCellphone)
+                ? normalizedPhone
+                : normalizedCellphone
         };
 
         var result = await userManager.CreateAsync(user, request.Password);
