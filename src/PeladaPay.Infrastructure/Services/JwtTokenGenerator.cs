@@ -10,6 +10,8 @@ namespace PeladaPay.Infrastructure.Services;
 
 public class JwtTokenGenerator(IConfiguration configuration) : IJwtTokenGenerator
 {
+    private const string SecurityStampClaimType = "security_stamp";
+
     public string Generate(ApplicationUser user)
     {
         var issuer = configuration["Jwt:Issuer"]!;
@@ -20,7 +22,8 @@ public class JwtTokenGenerator(IConfiguration configuration) : IJwtTokenGenerato
         {
             new(JwtRegisteredClaimNames.Sub, user.Id),
             new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
-            new(ClaimTypes.NameIdentifier, user.Id)
+            new(ClaimTypes.NameIdentifier, user.Id),
+            new(SecurityStampClaimType, user.SecurityStamp ?? string.Empty)
         };
 
         var credentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)), SecurityAlgorithms.HmacSha256);
