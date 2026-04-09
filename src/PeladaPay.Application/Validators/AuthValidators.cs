@@ -19,6 +19,9 @@ public class RegisterManagerCommandValidator : AbstractValidator<RegisterManager
         RuleFor(x => x.Cellphone).NotEmpty().MaximumLength(20);
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(120);
         RuleFor(x => x.Password).NotEmpty().MinimumLength(6);
+        RuleFor(x => x.PlanId)
+            .Must(planId => !planId.HasValue || planId.Value != Guid.Empty)
+            .WithMessage("PlanId inválido.");
     }
 }
 

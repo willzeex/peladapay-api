@@ -2,7 +2,10 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using PeladaPay.Application.DTOs;
 using PeladaPay.Application.Interfaces;
+using PeladaPay.Domain.Constants;
 using PeladaPay.Domain.Entities;
+using PeladaPay.Domain.Exceptions;
+using PeladaPay.Domain.Interfaces;
 
 namespace PeladaPay.Application.Features.Auth.Commands;
 
@@ -13,11 +16,13 @@ public sealed record RegisterManagerCommand(
     string Phone,
     string Cellphone,
     string Email,
-    string Password) : IRequest<AuthResponseDto>;
+    string Password,
+    Guid? PlanId) : IRequest<AuthResponseDto>;
 
 public sealed class RegisterManagerCommandHandler(
     UserManager<ApplicationUser> userManager,
     RoleManager<IdentityRole> roleManager,
+    IRepository<Plan> planRepository,
     IJwtTokenGenerator jwtTokenGenerator) : IRequestHandler<RegisterManagerCommand, AuthResponseDto>
 {
     private const string OrganizerRole = "Organizer";
@@ -29,6 +34,10 @@ public sealed class RegisterManagerCommandHandler(
         var normalizedPhone = request.Phone.Trim();
         var normalizedCellphone = request.Cellphone.Trim();
 
+        var resolvedPlanId = request.PlanId ?? Plans.FreeId;
+        var plan = await planRepository.GetByIdAsync(resolvedPlanId, cancellationToken)
+            ?? throw new NotFoundException("Plano informado não encontrado.");
+
         var user = new ApplicationUser
         {
             UserName = normalizedEmail,
@@ -38,7 +47,8 @@ public sealed class RegisterManagerCommandHandler(
             Whatsapp = normalizedWhatsapp,
             PhoneNumber = string.IsNullOrWhiteSpace(normalizedCellphone)
                 ? normalizedPhone
-                : normalizedCellphone
+                : normalizedCellphone,
+            PlanId = plan.Id
         };
 
         var result = await userManager.CreateAsync(user, request.Password);

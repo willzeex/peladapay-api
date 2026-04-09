@@ -12,7 +12,8 @@ Content-Type: application/json
   "phone": "31993776059",
   "cellphone": "31993776059",
   "email": "will_kilsen@hotmail.com",
-  "password": "Will@2025"
+  "password": "Will@2025",
+  "planId": null
 }
 
 ### Login
