@@ -34,7 +34,7 @@ public sealed class RegisterManagerCommandHandler(
         var normalizedPhone = request.Phone.Trim();
         var normalizedCellphone = request.Cellphone.Trim();
 
-        var resolvedPlanId = request.PlanId ?? Plans.FreeId;
+        var resolvedPlanId = request.PlanId ?? AvaliablePlans.FreeId;
         var plan = await planRepository.GetByIdAsync(resolvedPlanId, cancellationToken)
             ?? throw new NotFoundException("Plano informado não encontrado.");
 

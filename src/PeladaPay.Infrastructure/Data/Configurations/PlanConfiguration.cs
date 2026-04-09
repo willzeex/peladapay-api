@@ -20,7 +20,7 @@ public sealed class PlanConfiguration : IEntityTypeConfiguration<Plan>
         entity.HasData(
             new Plan
             {
-                Id = Plans.FreeId,
+                Id = AvaliablePlans.FreeId,
                 CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 Name = "Plano Grátis",
                 Slug = "free",
@@ -33,7 +33,7 @@ public sealed class PlanConfiguration : IEntityTypeConfiguration<Plan>
             },
             new Plan
             {
-                Id = Plans.ProId,
+                Id = AvaliablePlans.ProId,
                 CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 Name = "Plano Pro",
                 Slug = "pro",
