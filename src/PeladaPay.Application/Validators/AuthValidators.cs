@@ -30,8 +30,14 @@ public class StartOnboardingProfileCommandValidator : AbstractValidator<StartOnb
     public StartOnboardingProfileCommandValidator()
     {
         RuleFor(x => x.FullName).NotEmpty().MaximumLength(120);
-        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(120);
+        RuleFor(x => x.Cpf)
+            .NotEmpty()
+            .Length(11, 14)
+            .Matches("^[0-9.-]+$");
         RuleFor(x => x.Whatsapp).NotEmpty().MaximumLength(20);
+        RuleFor(x => x.Phone).NotEmpty().MaximumLength(20);
+        RuleFor(x => x.Cellphone).NotEmpty().MaximumLength(20);
+        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(120);
         RuleFor(x => x.Password).NotEmpty().MinimumLength(6);
     }
 }
@@ -41,10 +47,6 @@ public class CompleteOnboardingComplianceCommandValidator : AbstractValidator<Co
     public CompleteOnboardingComplianceCommandValidator()
     {
         RuleFor(x => x.SessionId).NotEqual(Guid.Empty);
-        RuleFor(x => x.Cpf)
-            .NotEmpty()
-            .Length(11, 14)
-            .Matches("^[0-9.-]+$");
         RuleFor(x => x.BirthDate).LessThan(DateOnly.FromDateTime(DateTime.UtcNow));
         RuleFor(x => x.Address).NotEmpty().MaximumLength(200);
     }

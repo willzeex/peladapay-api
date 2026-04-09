@@ -7,8 +7,11 @@ namespace PeladaPay.Application.Features.Auth.Commands;
 
 public sealed record StartOnboardingProfileCommand(
     string FullName,
-    string Email,
+    string Cpf,
     string Whatsapp,
+    string Phone,
+    string Cellphone,
+    string Email,
     string Password) : IRequest<OnboardingStepResponseDto>;
 
 public sealed class StartOnboardingProfileCommandHandler(
@@ -19,13 +22,21 @@ public sealed class StartOnboardingProfileCommandHandler(
 
     public async Task<OnboardingStepResponseDto> Handle(StartOnboardingProfileCommand request, CancellationToken cancellationToken)
     {
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        var normalizedWhatsapp = request.Whatsapp.Trim();
+        var normalizedPhone = request.Phone.Trim();
+        var normalizedCellphone = request.Cellphone.Trim();
+
         var user = new ApplicationUser
         {
-            UserName = request.Email.Trim().ToLowerInvariant(),
-            Email = request.Email.Trim().ToLowerInvariant(),
+            UserName = normalizedEmail,
+            Email = normalizedEmail,
             FullName = request.FullName.Trim(),
-            Whatsapp = request.Whatsapp.Trim(),
-            PhoneNumber = request.Whatsapp.Trim(),
+            Cpf = request.Cpf.Trim(),
+            Whatsapp = normalizedWhatsapp,
+            PhoneNumber = string.IsNullOrWhiteSpace(normalizedCellphone)
+                ? normalizedPhone
+                : normalizedCellphone,
             OnboardingCurrentStep = 1
         };
 
