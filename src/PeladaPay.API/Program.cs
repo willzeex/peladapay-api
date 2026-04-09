@@ -9,26 +9,18 @@ using PeladaPay.Infrastructure.Extensions;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
-const string CorsPolicyName = "CorsPolicy";
-
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-    ?? [];
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy(CorsPolicyName, policy =>
+    options.AddPolicy("Production", policy =>
     {
-        if (allowedOrigins.Length == 0)
-        {
-            policy.AllowAnyOrigin()
-                  .AllowAnyHeader()
-                  .AllowAnyMethod();
-            return;
-        }
-
-        policy.WithOrigins(allowedOrigins)
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+        policy
+            .WithOrigins(
+                "https://peladapay.duckdns.org"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials(); // só se usar cookie/token
     });
 });
 
@@ -51,7 +43,7 @@ app.MapHealthChecks("/health");
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-app.UseCors(CorsPolicyName);
+app.UseCors("Production");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
