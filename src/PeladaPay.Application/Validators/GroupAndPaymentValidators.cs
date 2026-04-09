@@ -3,6 +3,7 @@ using PeladaPay.Application.Features.FinancialAccounts.Commands;
 using PeladaPay.Application.Features.Groups.Commands;
 using PeladaPay.Application.Features.Payments.Commands;
 using PeladaPay.Application.Features.Payments.Webhooks;
+using PeladaPay.Domain.Enums;
 
 namespace PeladaPay.Application.Validators;
 
@@ -70,16 +71,14 @@ public class ConfirmPaymentWebhookCommandValidator : AbstractValidator<ConfirmPa
 
 public class UpdateGroupSettingsCommandValidator : AbstractValidator<UpdateGroupSettingsCommand>
 {
-    private static readonly string[] ValidFrequencies = ["semanal", "Quinzenal", "Mensal"];
-
     public UpdateGroupSettingsCommandValidator()
     {
         RuleFor(x => x.GroupId).NotEqual(Guid.Empty);
         RuleFor(x => x.Name).MaximumLength(100).When(x => x.Name is not null);
         RuleFor(x => x.MatchDate).GreaterThan(DateTime.UtcNow.Date.AddDays(-1)).When(x => x.MatchDate.HasValue);
         RuleFor(x => x.Frequency)
-            .Must(f => string.IsNullOrWhiteSpace(f) || ValidFrequencies.Contains(f))
-            .When(x => x.Frequency is not null);
+            .IsInEnum()
+            .When(x => x.Frequency.HasValue);
         RuleFor(x => x.Venue).MaximumLength(120).When(x => x.Venue is not null);
         RuleFor(x => x.CrestUrl).MaximumLength(500).When(x => x.CrestUrl is not null);
     }

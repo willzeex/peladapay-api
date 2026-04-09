@@ -28,7 +28,7 @@ public sealed class GetGroupSettingsQueryHandler(
             group.Id,
             group.Name,
             group.MatchDate,
-            group.Frequency ?? string.Empty,
+            group.Frequency,
             group.Venue ?? string.Empty,
             group.CrestUrl ?? string.Empty,
             group.FinancialAccountId);

@@ -2,6 +2,7 @@ using MediatR;
 using PeladaPay.Application.DTOs;
 using PeladaPay.Application.Interfaces;
 using PeladaPay.Domain.Entities;
+using PeladaPay.Domain.Enums;
 using PeladaPay.Domain.Exceptions;
 using PeladaPay.Domain.Interfaces;
 
@@ -11,7 +12,7 @@ public sealed record UpdateGroupSettingsCommand(
     Guid GroupId,
     string? Name,
     DateTime? MatchDate,
-    string? Frequency,
+    GroupFrequency? Frequency,
     string? Venue,
     string? CrestUrl) : IRequest<GroupDto>;
 
@@ -44,9 +45,7 @@ public sealed class UpdateGroupSettingsCommandHandler(
 
         if (request.Frequency is not null)
         {
-            group.Frequency = string.IsNullOrWhiteSpace(request.Frequency)
-                ? null
-                : request.Frequency.Trim();
+            group.Frequency = request.Frequency;
             hasChanges = true;
         }
 

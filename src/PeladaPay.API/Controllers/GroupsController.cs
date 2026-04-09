@@ -6,6 +6,7 @@ using PeladaPay.Application.DTOs;
 using PeladaPay.Application.Features.Groups.Commands;
 using PeladaPay.Application.Features.Groups.Queries;
 using PeladaPay.Application.Interfaces;
+using PeladaPay.Domain.Enums;
 
 namespace PeladaPay.API.Controllers;
 
@@ -140,6 +141,6 @@ public class GroupsController(IMediator mediator, ICurrentUserService currentUse
 public sealed record UpdateGroupSettingsRequest(
     string? Name,
     DateTime? MatchDate,
-    string? Frequency,
+    GroupFrequency? Frequency,
     string? Venue,
     string? CrestUrl);
