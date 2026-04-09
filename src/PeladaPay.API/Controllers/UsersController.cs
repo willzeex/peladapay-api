@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PeladaPay.API.Contracts;
 using PeladaPay.Application.DTOs;
+using PeladaPay.Application.Features.Auth.Commands;
 using PeladaPay.Application.Features.Users.Commands;
 using PeladaPay.Application.Features.Users.Queries;
 
@@ -13,6 +14,19 @@ namespace PeladaPay.API.Controllers;
 [Route("api/[controller]")]
 public class UsersController(IMediator mediator) : ControllerBase
 {
+    [AllowAnonymous]
+    [HttpPost("account")]
+    [ProducesResponseType(typeof(ApiResponse<AuthResponseDto>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiValidationErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CreateAccount([FromBody] RegisterManagerCommand command, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(command, cancellationToken);
+        return StatusCode(StatusCodes.Status201Created, new ApiResponse<AuthResponseDto>(
+            StatusCodes.Status201Created,
+            "Conta criada com sucesso.",
+            result));
+    }
 
     [HttpGet("profile")]
     [ProducesResponseType(typeof(ApiResponse<ApplicationUserProfileDto>), StatusCodes.Status200OK)]
