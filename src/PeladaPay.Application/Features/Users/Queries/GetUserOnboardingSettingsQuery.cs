@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using PeladaPay.Application.Interfaces;
 using PeladaPay.Domain.Entities;
+using PeladaPay.Domain.Enums;
 
 namespace PeladaPay.Application.Features.Users.Queries;
 
@@ -9,7 +10,7 @@ public sealed record GetUserOnboardingSettingsQuery : IRequest<GetUserOnboarding
 
 public sealed record GetUserOnboardingSettingsResponse(
     string OnboardingGroupName,
-    string OnboardingFrequency,
+    GroupFrequency? OnboardingFrequency,
     string OnboardingVenue,
     string OnboardingCrestUrl,
     Guid? PlanId);
@@ -26,7 +27,7 @@ public sealed class GetUserOnboardingSettingsQueryHandler(
 
         return new GetUserOnboardingSettingsResponse(
             user.OnboardingGroupName ?? string.Empty,
-            user.OnboardingFrequency ?? string.Empty,
+            user.OnboardingFrequency,
             user.OnboardingVenue ?? string.Empty,
             user.OnboardingCrestUrl ?? string.Empty,
             user.PlanId);

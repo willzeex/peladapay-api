@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using PeladaPay.Application.Interfaces;
 using PeladaPay.Domain.Entities;
+using PeladaPay.Domain.Enums;
 using PeladaPay.Domain.Exceptions;
 using PeladaPay.Domain.Interfaces;
 
@@ -9,14 +10,14 @@ namespace PeladaPay.Application.Features.Users.Commands;
 
 public sealed record UpdateUserOnboardingSettingsCommand(
     string? OnboardingGroupName,
-    string? OnboardingFrequency,
+    GroupFrequency? OnboardingFrequency,
     string? OnboardingVenue,
     string? OnboardingCrestUrl,
     Guid? PlanId) : IRequest<UpdateUserOnboardingSettingsResponse>;
 
 public sealed record UpdateUserOnboardingSettingsResponse(
     string? OnboardingGroupName,
-    string? OnboardingFrequency,
+    GroupFrequency? OnboardingFrequency,
     string? OnboardingVenue,
     string? OnboardingCrestUrl,
     Guid? PlanId);
@@ -44,9 +45,7 @@ public sealed class UpdateUserOnboardingSettingsCommandHandler(
 
         if (request.OnboardingFrequency is not null)
         {
-            user.OnboardingFrequency = string.IsNullOrWhiteSpace(request.OnboardingFrequency)
-                ? null
-                : request.OnboardingFrequency.Trim();
+            user.OnboardingFrequency = request.OnboardingFrequency;
             hasChanges = true;
         }
 

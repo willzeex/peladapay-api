@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using PeladaPay.Application.DTOs;
 using PeladaPay.Domain.Entities;
+using PeladaPay.Domain.Enums;
 using PeladaPay.Domain.Exceptions;
 using PeladaPay.Domain.Interfaces;
 
@@ -10,7 +11,7 @@ namespace PeladaPay.Application.Features.Auth.Commands;
 public sealed record CompleteOnboardingGroupCommand(
     Guid SessionId,
     string GroupName,
-    string Frequency,
+    GroupFrequency Frequency,
     string? Venue,
     string? CrestUrl,
     Guid PlanId) : IRequest<OnboardingStepResponseDto>;
@@ -35,7 +36,7 @@ public sealed class CompleteOnboardingGroupCommandHandler(
         }
 
         user.OnboardingGroupName = request.GroupName.Trim();
-        user.OnboardingFrequency = request.Frequency.Trim();
+        user.OnboardingFrequency = request.Frequency;
         user.OnboardingVenue = request.Venue?.Trim();
         user.OnboardingCrestUrl = request.CrestUrl?.Trim();
         var plan = await planRepository.GetByIdAsync(request.PlanId, cancellationToken)

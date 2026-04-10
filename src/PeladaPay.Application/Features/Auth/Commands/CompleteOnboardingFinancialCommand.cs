@@ -33,7 +33,7 @@ public sealed class CompleteOnboardingFinancialCommandHandler(
 
         if (user.OnboardingCurrentStep < 3 || string.IsNullOrWhiteSpace(user.Cpf) || user.BirthDate is null
             || string.IsNullOrWhiteSpace(user.Address) || string.IsNullOrWhiteSpace(user.OnboardingGroupName)
-            || string.IsNullOrWhiteSpace(user.OnboardingFrequency) || !user.PlanId.HasValue)
+            || !user.OnboardingFrequency.HasValue || !user.PlanId.HasValue)
         {
             throw new InvalidOperationException("Complete as etapas anteriores antes de finalizar o onboarding.");
         }
@@ -55,7 +55,7 @@ public sealed class CompleteOnboardingFinancialCommandHandler(
         {
             Name = user.OnboardingGroupName,
             MatchDate = DateTime.UtcNow,
-            Frequency = user.OnboardingFrequency,
+            Frequency = user.OnboardingFrequency.Value,
             Venue = user.OnboardingVenue,
             CrestUrl = user.OnboardingCrestUrl,
             FinancialAccountId = account.Id,

@@ -1,4 +1,5 @@
 using PeladaPay.Domain.Common;
+using PeladaPay.Domain.Enums;
 
 namespace PeladaPay.Domain.Entities;
 
@@ -6,7 +7,7 @@ public class Group : BaseEntity
 {
     public string Name { get; set; } = string.Empty;
     public DateTime MatchDate { get; set; }
-    public string? Frequency { get; set; }
+    public GroupFrequency? Frequency { get; set; }
     public string? Venue { get; set; }
     public string? CrestUrl { get; set; }
     public Guid FinancialAccountId { get; set; }

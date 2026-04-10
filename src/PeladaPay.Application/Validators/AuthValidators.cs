@@ -2,6 +2,7 @@ using FluentValidation;
 using PeladaPay.Application.Features.Auth.Commands;
 using PeladaPay.Application.Features.Auth.Queries;
 using PeladaPay.Application.Features.Users.Commands;
+using PeladaPay.Domain.Enums;
 
 namespace PeladaPay.Application.Validators;
 
@@ -54,13 +55,11 @@ public class CompleteOnboardingComplianceCommandValidator : AbstractValidator<Co
 
 public class CompleteOnboardingGroupCommandValidator : AbstractValidator<CompleteOnboardingGroupCommand>
 {
-    private static readonly string[] ValidFrequencies = ["semanal", "Quinzenal", "Mensal"];
-
     public CompleteOnboardingGroupCommandValidator()
     {
         RuleFor(x => x.SessionId).NotEqual(Guid.Empty);
         RuleFor(x => x.GroupName).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.Frequency).NotEmpty().Must(f => ValidFrequencies.Contains(f));
+        RuleFor(x => x.Frequency).IsInEnum().NotEqual((GroupFrequency)0);
         RuleFor(x => x.Venue).MaximumLength(120);
         RuleFor(x => x.CrestUrl).MaximumLength(500);
         RuleFor(x => x.PlanId).NotEqual(Guid.Empty);
@@ -110,14 +109,12 @@ public class UpdateUserProfileCommandValidator : AbstractValidator<UpdateUserPro
 
 public class UpdateUserOnboardingSettingsCommandValidator : AbstractValidator<UpdateUserOnboardingSettingsCommand>
 {
-    private static readonly string[] ValidFrequencies = ["semanal", "Quinzenal", "Mensal"];
-
     public UpdateUserOnboardingSettingsCommandValidator()
     {
         RuleFor(x => x.OnboardingGroupName).MaximumLength(100).When(x => x.OnboardingGroupName is not null);
         RuleFor(x => x.OnboardingFrequency)
-            .Must(f => string.IsNullOrWhiteSpace(f) || ValidFrequencies.Contains(f))
-            .When(x => x.OnboardingFrequency is not null);
+            .IsInEnum()
+            .When(x => x.OnboardingFrequency.HasValue);
         RuleFor(x => x.OnboardingVenue).MaximumLength(120).When(x => x.OnboardingVenue is not null);
         RuleFor(x => x.OnboardingCrestUrl).MaximumLength(500).When(x => x.OnboardingCrestUrl is not null);
         RuleFor(x => x.PlanId)
