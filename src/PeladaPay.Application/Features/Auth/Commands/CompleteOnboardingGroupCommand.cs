@@ -18,7 +18,9 @@ public sealed record CompleteOnboardingGroupCommand(
 
 public sealed class CompleteOnboardingGroupCommandHandler(
     UserManager<ApplicationUser> userManager,
-    IRepository<Plan> planRepository) : IRequestHandler<CompleteOnboardingGroupCommand, OnboardingStepResponseDto>
+    IRepository<Plan> planRepository,
+    IRepository<OnboardingGroupDraft> onboardingGroupDraftRepository,
+    IUnitOfWork unitOfWork) : IRequestHandler<CompleteOnboardingGroupCommand, OnboardingStepResponseDto>
 {
     public async Task<OnboardingStepResponseDto> Handle(CompleteOnboardingGroupCommand request, CancellationToken cancellationToken)
     {
@@ -35,10 +37,31 @@ public sealed class CompleteOnboardingGroupCommandHandler(
             throw new InvalidOperationException("Complete a etapa de compliance antes da pelada.");
         }
 
-        user.OnboardingGroupName = request.GroupName.Trim();
-        user.OnboardingFrequency = request.Frequency;
-        user.OnboardingVenue = request.Venue?.Trim();
-        user.OnboardingCrestUrl = request.CrestUrl?.Trim();
+        var draft = (await onboardingGroupDraftRepository.GetAsync(x => x.UserId == user.Id, cancellationToken))
+            .SingleOrDefault();
+
+        if (draft is null)
+        {
+            draft = new OnboardingGroupDraft
+            {
+                UserId = user.Id,
+                Name = request.GroupName.Trim(),
+                Frequency = request.Frequency,
+                Venue = request.Venue?.Trim(),
+                CrestUrl = request.CrestUrl?.Trim()
+            };
+
+            await onboardingGroupDraftRepository.AddAsync(draft, cancellationToken);
+        }
+        else
+        {
+            draft.Name = request.GroupName.Trim();
+            draft.Frequency = request.Frequency;
+            draft.Venue = request.Venue?.Trim();
+            draft.CrestUrl = request.CrestUrl?.Trim();
+            onboardingGroupDraftRepository.Update(draft);
+        }
+
         var plan = await planRepository.GetByIdAsync(request.PlanId, cancellationToken)
             ?? throw new NotFoundException("Plano informado não encontrado.");
 
@@ -51,6 +74,8 @@ public sealed class CompleteOnboardingGroupCommandHandler(
             var errors = string.Join("; ", updateResult.Errors.Select(x => x.Description));
             throw new InvalidOperationException(errors);
         }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new OnboardingStepResponseDto(request.SessionId, 3, 4, "financeiro");
     }

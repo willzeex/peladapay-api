@@ -24,45 +24,55 @@ public sealed record UpdateUserOnboardingSettingsResponse(
 
 public sealed class UpdateUserOnboardingSettingsCommandHandler(
     UserManager<ApplicationUser> userManager,
+    IRepository<OnboardingGroupDraft> onboardingGroupDraftRepository,
     IRepository<Plan> planRepository,
-    ICurrentUserService currentUserService) : IRequestHandler<UpdateUserOnboardingSettingsCommand, UpdateUserOnboardingSettingsResponse>
+    ICurrentUserService currentUserService,
+    IUnitOfWork unitOfWork) : IRequestHandler<UpdateUserOnboardingSettingsCommand, UpdateUserOnboardingSettingsResponse>
 {
     public async Task<UpdateUserOnboardingSettingsResponse> Handle(UpdateUserOnboardingSettingsCommand request, CancellationToken cancellationToken)
     {
         var userId = currentUserService.UserId ?? throw new UnauthorizedAccessException();
         var user = await userManager.FindByIdAsync(userId)
             ?? throw new InvalidOperationException("Usuário autenticado não encontrado.");
+        var draft = (await onboardingGroupDraftRepository.GetAsync(x => x.UserId == user.Id, cancellationToken))
+            .SingleOrDefault();
+        var draftAlreadyExists = draft is not null;
 
-        var hasChanges = false;
+        var hasDraftChanges = false;
+        var hasUserChanges = false;
 
         if (request.OnboardingGroupName is not null)
         {
-            user.OnboardingGroupName = string.IsNullOrWhiteSpace(request.OnboardingGroupName)
+            draft ??= new OnboardingGroupDraft { UserId = user.Id };
+            draft.Name = string.IsNullOrWhiteSpace(request.OnboardingGroupName)
                 ? null
                 : request.OnboardingGroupName.Trim();
-            hasChanges = true;
+            hasDraftChanges = true;
         }
 
         if (request.OnboardingFrequency is not null)
         {
-            user.OnboardingFrequency = request.OnboardingFrequency;
-            hasChanges = true;
+            draft ??= new OnboardingGroupDraft { UserId = user.Id };
+            draft.Frequency = request.OnboardingFrequency;
+            hasDraftChanges = true;
         }
 
         if (request.OnboardingVenue is not null)
         {
-            user.OnboardingVenue = string.IsNullOrWhiteSpace(request.OnboardingVenue)
+            draft ??= new OnboardingGroupDraft { UserId = user.Id };
+            draft.Venue = string.IsNullOrWhiteSpace(request.OnboardingVenue)
                 ? null
                 : request.OnboardingVenue.Trim();
-            hasChanges = true;
+            hasDraftChanges = true;
         }
 
         if (request.OnboardingCrestUrl is not null)
         {
-            user.OnboardingCrestUrl = string.IsNullOrWhiteSpace(request.OnboardingCrestUrl)
+            draft ??= new OnboardingGroupDraft { UserId = user.Id };
+            draft.CrestUrl = string.IsNullOrWhiteSpace(request.OnboardingCrestUrl)
                 ? null
                 : request.OnboardingCrestUrl.Trim();
-            hasChanges = true;
+            hasDraftChanges = true;
         }
 
         if (request.PlanId.HasValue)
@@ -70,10 +80,22 @@ public sealed class UpdateUserOnboardingSettingsCommandHandler(
             var plan = await planRepository.GetByIdAsync(request.PlanId.Value, cancellationToken)
                 ?? throw new NotFoundException("Plano informado não encontrado.");
             user.PlanId = plan.Id;
-            hasChanges = true;
+            hasUserChanges = true;
         }
 
-        if (hasChanges)
+        if (hasDraftChanges)
+        {
+            if (draftAlreadyExists)
+            {
+                onboardingGroupDraftRepository.Update(draft!);
+            }
+            else
+            {
+                await onboardingGroupDraftRepository.AddAsync(draft!, cancellationToken);
+            }
+        }
+
+        if (hasUserChanges)
         {
             var updateResult = await userManager.UpdateAsync(user);
             if (!updateResult.Succeeded)
@@ -83,11 +105,16 @@ public sealed class UpdateUserOnboardingSettingsCommandHandler(
             }
         }
 
+        if (hasDraftChanges)
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
         return new UpdateUserOnboardingSettingsResponse(
-            user.OnboardingGroupName,
-            user.OnboardingFrequency,
-            user.OnboardingVenue,
-            user.OnboardingCrestUrl,
+            draft?.Name,
+            draft?.Frequency,
+            draft?.Venue,
+            draft?.CrestUrl,
             user.PlanId);
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using PeladaPay.Application.Interfaces;
 using PeladaPay.Domain.Entities;
 using PeladaPay.Domain.Enums;
+using PeladaPay.Domain.Interfaces;
 
 namespace PeladaPay.Application.Features.Users.Queries;
 
@@ -17,6 +18,7 @@ public sealed record GetUserOnboardingSettingsResponse(
 
 public sealed class GetUserOnboardingSettingsQueryHandler(
     UserManager<ApplicationUser> userManager,
+    IRepository<OnboardingGroupDraft> onboardingGroupDraftRepository,
     ICurrentUserService currentUserService) : IRequestHandler<GetUserOnboardingSettingsQuery, GetUserOnboardingSettingsResponse>
 {
     public async Task<GetUserOnboardingSettingsResponse> Handle(GetUserOnboardingSettingsQuery request, CancellationToken cancellationToken)
@@ -24,12 +26,14 @@ public sealed class GetUserOnboardingSettingsQueryHandler(
         var userId = currentUserService.UserId ?? throw new UnauthorizedAccessException();
         var user = await userManager.FindByIdAsync(userId)
             ?? throw new InvalidOperationException("Usuário autenticado não encontrado.");
+        var draft = (await onboardingGroupDraftRepository.GetAsync(x => x.UserId == user.Id, cancellationToken))
+            .SingleOrDefault();
 
         return new GetUserOnboardingSettingsResponse(
-            user.OnboardingGroupName ?? string.Empty,
-            user.OnboardingFrequency,
-            user.OnboardingVenue ?? string.Empty,
-            user.OnboardingCrestUrl ?? string.Empty,
+            draft?.Name ?? string.Empty,
+            draft?.Frequency,
+            draft?.Venue ?? string.Empty,
+            draft?.CrestUrl ?? string.Empty,
             user.PlanId);
     }
 }

@@ -16,6 +16,7 @@ public sealed record CompleteOnboardingFinancialCommand(
 
 public sealed class CompleteOnboardingFinancialCommandHandler(
     UserManager<ApplicationUser> userManager,
+    IRepository<OnboardingGroupDraft> onboardingGroupDraftRepository,
     IRepository<FinancialAccount> accountRepository,
     IRepository<Group> groupRepository,
     IUnitOfWork unitOfWork,
@@ -31,9 +32,12 @@ public sealed class CompleteOnboardingFinancialCommandHandler(
             throw new InvalidOperationException("Essa sessão de onboarding já foi finalizada.");
         }
 
+        var draft = (await onboardingGroupDraftRepository.GetAsync(x => x.UserId == user.Id, cancellationToken))
+            .SingleOrDefault();
+
         if (user.OnboardingCurrentStep < 3 || string.IsNullOrWhiteSpace(user.Cpf) || user.BirthDate is null
-            || string.IsNullOrWhiteSpace(user.Address) || string.IsNullOrWhiteSpace(user.OnboardingGroupName)
-            || !user.OnboardingFrequency.HasValue || !user.PlanId.HasValue)
+            || string.IsNullOrWhiteSpace(user.Address) || draft is null || string.IsNullOrWhiteSpace(draft.Name)
+            || draft.Frequency is null || !user.PlanId.HasValue)
         {
             throw new InvalidOperationException("Complete as etapas anteriores antes de finalizar o onboarding.");
         }
@@ -53,11 +57,11 @@ public sealed class CompleteOnboardingFinancialCommandHandler(
 
         var group = new Group
         {
-            Name = user.OnboardingGroupName,
+            Name = draft!.Name,
             MatchDate = DateTime.UtcNow,
-            Frequency = user.OnboardingFrequency.Value,
-            Venue = user.OnboardingVenue,
-            CrestUrl = user.OnboardingCrestUrl,
+            Frequency = draft.Frequency!.Value,
+            Venue = draft.Venue,
+            CrestUrl = draft.CrestUrl,
             FinancialAccountId = account.Id,
             OrganizerId = user.Id
         };

@@ -15,13 +15,13 @@ namespace PeladaPay.Application.Tests.Features.Users.Commands;
 public class UpdateUserOnboardingSettingsCommandHandlerTests
 {
     [Fact]
-    public async Task Handle_WithJsonPayload_UpdatesUserAndReturnsResponse()
+    public async Task Handle_WithJsonPayload_UpdatesDraftAndReturnsResponse()
     {
         const string payload = """
         {
-            "onboardingGroupName": "Pelada de Terça",
+            "onboardingGroupName": "Pelada de Terca",
             "onboardingFrequency": "Semanal",
-            "onboardingVenue": "Arena são cristovão"
+            "onboardingVenue": "Arena Sao Cristovao"
         }
         """;
 
@@ -37,38 +37,45 @@ public class UpdateUserOnboardingSettingsCommandHandlerTests
 
         var user = new ApplicationUser
         {
-            Id = "user-123",
-            OnboardingGroupName = "Grupo antigo",
-            OnboardingFrequency = GroupFrequency.Mensal,
-            OnboardingVenue = "Quadra antiga"
+            Id = "user-123"
+        };
+
+        var drafts = new Dictionary<string, OnboardingGroupDraft>
+        {
+            [user.Id] = new()
+            {
+                UserId = user.Id,
+                Name = "Grupo antigo",
+                Frequency = GroupFrequency.Mensal,
+                Venue = "Quadra antiga"
+            }
         };
 
         var userManagerMock = CreateUserManagerMock();
         userManagerMock
             .Setup(x => x.FindByIdAsync(user.Id))
             .ReturnsAsync(user);
-        userManagerMock
-            .Setup(x => x.UpdateAsync(user))
-            .ReturnsAsync(IdentityResult.Success);
 
         var handler = new UpdateUserOnboardingSettingsCommandHandler(
             userManagerMock.Object,
+            new StubOnboardingGroupDraftRepository(drafts),
             new StubPlanRepository(),
-            new StubCurrentUserService(user.Id));
+            new StubCurrentUserService(user.Id),
+            new StubUnitOfWork());
 
         var response = await handler.Handle(command!, CancellationToken.None);
 
-        Assert.Equal("Pelada de Terça", response.OnboardingGroupName);
+        Assert.Equal("Pelada de Terca", response.OnboardingGroupName);
         Assert.Equal(GroupFrequency.Semanal, response.OnboardingFrequency);
-        Assert.Equal("Arena são cristovão", response.OnboardingVenue);
+        Assert.Equal("Arena Sao Cristovao", response.OnboardingVenue);
         Assert.Null(response.OnboardingCrestUrl);
         Assert.Null(response.PlanId);
 
-        Assert.Equal("Pelada de Terça", user.OnboardingGroupName);
-        Assert.Equal(GroupFrequency.Semanal, user.OnboardingFrequency);
-        Assert.Equal("Arena são cristovão", user.OnboardingVenue);
+        Assert.Equal("Pelada de Terca", drafts[user.Id].Name);
+        Assert.Equal(GroupFrequency.Semanal, drafts[user.Id].Frequency);
+        Assert.Equal("Arena Sao Cristovao", drafts[user.Id].Venue);
 
-        userManagerMock.Verify(x => x.UpdateAsync(user), Times.Once);
+        userManagerMock.Verify(x => x.UpdateAsync(It.IsAny<ApplicationUser>()), Times.Never);
     }
 
     [Fact]
@@ -93,8 +100,10 @@ public class UpdateUserOnboardingSettingsCommandHandlerTests
 
         var handler = new UpdateUserOnboardingSettingsCommandHandler(
             userManagerMock.Object,
+            new StubOnboardingGroupDraftRepository(),
             new StubPlanRepository(),
-            new StubCurrentUserService(user.Id));
+            new StubCurrentUserService(user.Id),
+            new StubUnitOfWork());
 
         await Assert.ThrowsAsync<NotFoundException>(() => handler.Handle(command, CancellationToken.None));
 
@@ -106,11 +115,19 @@ public class UpdateUserOnboardingSettingsCommandHandlerTests
     {
         var user = new ApplicationUser
         {
-            Id = "user-789",
-            OnboardingGroupName = "Pelada da Quinta",
-            OnboardingFrequency = GroupFrequency.Mensal,
-            OnboardingVenue = "Arena Norte",
-            OnboardingCrestUrl = "crest.png"
+            Id = "user-789"
+        };
+
+        var drafts = new Dictionary<string, OnboardingGroupDraft>
+        {
+            [user.Id] = new()
+            {
+                UserId = user.Id,
+                Name = "Pelada da Quinta",
+                Frequency = GroupFrequency.Mensal,
+                Venue = "Arena Norte",
+                CrestUrl = "crest.png"
+            }
         };
 
         var userManagerMock = CreateUserManagerMock();
@@ -120,8 +137,10 @@ public class UpdateUserOnboardingSettingsCommandHandlerTests
 
         var handler = new UpdateUserOnboardingSettingsCommandHandler(
             userManagerMock.Object,
+            new StubOnboardingGroupDraftRepository(drafts),
             new StubPlanRepository(),
-            new StubCurrentUserService(user.Id));
+            new StubCurrentUserService(user.Id),
+            new StubUnitOfWork());
 
         var response = await handler.Handle(
             new UpdateUserOnboardingSettingsCommand(null, null, null, null, null),
@@ -156,6 +175,12 @@ public class UpdateUserOnboardingSettingsCommandHandlerTests
         public string? UserId { get; } = userId;
     }
 
+    private sealed class StubUnitOfWork : IUnitOfWork
+    {
+        public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(1);
+    }
+
     private sealed class StubPlanRepository(Dictionary<Guid, Plan>? plans = null) : IRepository<Plan>
     {
         private readonly Dictionary<Guid, Plan> _plans = plans ?? [];
@@ -171,5 +196,29 @@ public class UpdateUserOnboardingSettingsCommandHandlerTests
 
         public void Update(Plan entity)
             => throw new NotSupportedException();
+    }
+
+    private sealed class StubOnboardingGroupDraftRepository(Dictionary<string, OnboardingGroupDraft>? drafts = null) : IRepository<OnboardingGroupDraft>
+    {
+        private readonly Dictionary<string, OnboardingGroupDraft> _drafts = drafts ?? [];
+
+        public Task<OnboardingGroupDraft?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+            => Task.FromResult(_drafts.Values.SingleOrDefault(x => x.Id == id));
+
+        public Task<IReadOnlyCollection<OnboardingGroupDraft>> GetAsync(System.Linq.Expressions.Expression<Func<OnboardingGroupDraft, bool>> predicate, CancellationToken cancellationToken = default)
+        {
+            var compiled = predicate.Compile();
+            IReadOnlyCollection<OnboardingGroupDraft> result = _drafts.Values.Where(compiled).ToArray();
+            return Task.FromResult(result);
+        }
+
+        public Task AddAsync(OnboardingGroupDraft entity, CancellationToken cancellationToken = default)
+        {
+            _drafts[entity.UserId] = entity;
+            return Task.CompletedTask;
+        }
+
+        public void Update(OnboardingGroupDraft entity)
+            => _drafts[entity.UserId] = entity;
     }
 }

@@ -11,6 +11,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     }
 
     public DbSet<Group> Groups => Set<Group>();
+    public DbSet<OnboardingGroupDraft> OnboardingGroupDrafts => Set<OnboardingGroupDraft>();
     public DbSet<Player> Players => Set<Player>();
     public DbSet<GroupPlayer> GroupPlayers => Set<GroupPlayer>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
